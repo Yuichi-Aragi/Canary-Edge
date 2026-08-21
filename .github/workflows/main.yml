@@ -13,11 +13,13 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write 
+  contents: write
+  id-token: write
+  attestations: write
 
 jobs:
   build-and-release:
-    if: github.ref_name == 'main'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     
@@ -25,7 +27,9 @@ jobs:
       is_beta: ${{ steps.version-manager.outputs.is_beta }}
       version: ${{ steps.version-manager.outputs.version }}
       version_file: ${{ steps.version-manager.outputs.version_file }}
+      released: ${{ steps.version-manager.outputs.released }}
       committed: ${{ steps.commit.outputs.committed }}
+      attestation_id: ${{ steps.attest.outputs.attestation-id }}
 
     steps:
       - name: Checkout code
@@ -99,6 +103,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REF_NAME: ${{ github.ref_name }}
 
+      - name: Attest plugin artifacts
+        id: attest
+        if: steps.version-manager.outputs.released == 'true'
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: ${{ steps.version-manager.outputs.artifacts }}
+
       - name: Stage changes
         id: stage
         run: |
@@ -142,10 +153,10 @@ jobs:
           git commit -m "$MSG" --allow-empty
           
           # Pull latest to avoid push rejection (non-fast-forward)
-          git pull --rebase origin main
+          git pull --rebase origin ${{ github.ref_name }}
           
           # Push back to the triggering branch
-          git push origin HEAD:main
+          git push origin HEAD:${{ github.ref_name }}
           
           echo "committed=true" >> "$GITHUB_OUTPUT"
 
@@ -157,3 +168,5 @@ jobs:
           echo "|----------|-------|" >> "$GITHUB_STEP_SUMMARY"
           echo "| **Version** | ${{ steps.version-manager.outputs.version || 'N/A' }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| **Status** | ${{ job.status == 'success' && '✅ Success' || '❌ Failed' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **Released** | ${{ steps.version-manager.outputs.released == 'true' && '🚀 Yes' || '⏭️ Skipped' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **Attestation** | ${{ steps.attest.outputs.attestation-id && '🛡️ Verified (SLSA v4)' || 'N/A' }} |" >> "$GITHUB_STEP_SUMMARY"
