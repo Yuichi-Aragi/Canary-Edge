@@ -1,1 +1,61 @@
+@keyframes ce-fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
+@keyframes ce-popover-scale-in {
+  from { opacity: 0; transform: scaleY(0.95) translateY(-4px); }
+  to { opacity: 1; transform: scaleY(1) translateY(0); }
+}
+
+@keyframes ce-menu-slide-up {
+  from { opacity: 0; transform: translateY(4px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes ce-popover-slide-up {
+  from { opacity: 0; transform: translateY(4px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes ce-item-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes ce-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes ce-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes ce-shimmer-progress {
+  0% { opacity: 0.6; transform: scaleX(0.4) translateX(-100%); }
+  50% { opacity: 1; transform: scaleX(0.8) translateX(50%); }
+  100% { opacity: 0.6; transform: scaleX(0.4) translateX(200%); }
+}
+
+@keyframes ce-dropdown-show {
+  0% {
+    opacity: 0;
+    transform: scale(0.96) translateY(-2px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes ce-dropdown-hide {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.96) translateY(-2px);
+  }
+}

@@ -1,0 +1,16 @@
+@use "../abstracts/index" as *;
+
+
+.ce-note {
+  @extend %text-muted-sm;
+}
+
+.ce-settings-divider {
+  margin: 24px 0;
+  border: none;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.ce-virtuoso-full-height {
+  height: 100%;
+}
