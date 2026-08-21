@@ -1,0 +1,14 @@
+node_modules/
+
+assets/
+compiled.css
+
+build/
+
+.obsidian/
+
+.vscode/
+.idea/
+
+.DS_Store
+Thumbs.db

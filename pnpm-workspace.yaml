@@ -1,0 +1,12 @@
+minimumReleaseAge: 1440 
+
+minimumReleaseAgeStrict: true 
+
+minimumReleaseAgeExclude:
+  - esbuild
+  - react
+  - '@babel/*' 
+
+allowBuilds:
+  esbuild: true
+  "@parcel/watcher": true
