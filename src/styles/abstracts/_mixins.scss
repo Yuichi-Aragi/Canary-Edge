@@ -1,1 +1,25 @@
 
+@use "variables" as *;
+
+@mixin icon-variant($color) {
+  background-color: rgba($color, 0.1);
+  color: $color;
+}
+
+@mixin apply-icon-variants {
+  &.mod-blue { @include icon-variant($color-system-blue); }
+  &.mod-green { @include icon-variant($color-system-green); }
+  &.mod-orange { @include icon-variant($color-system-orange); }
+  &.mod-purple { @include icon-variant($color-system-purple); }
+  &.mod-red { @include icon-variant($color-system-red); }
+  &.mod-yellow { @include icon-variant($color-system-yellow); }
+  &.mod-cyan { @include icon-variant($color-system-cyan); }
+}
+
+@mixin ce-spin-animation {
+  animation: ce-spin 1s linear infinite;
+}
+
+@mixin ce-shimmer-animation {
+  animation: ce-shimmer 2s infinite linear;
+}

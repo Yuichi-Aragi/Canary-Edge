@@ -1,0 +1,60 @@
+
+:root {
+    --ce-space-2: clamp(1px, 0.5cqi, 3px);
+    --ce-space-4: clamp(2px, 1cqi, 6px);
+    --ce-space-6: clamp(4px, 1.5cqi, 8px);
+    --ce-space-8: clamp(6px, 2cqi, 12px);
+    --ce-space-10: clamp(8px, 2.5cqi, 14px);
+    --ce-space-12: clamp(10px, 3cqi, 16px);
+    --ce-space-14: clamp(12px, 3.5cqi, 18px);
+    --ce-space-16: clamp(12px, 4cqi, 20px);
+    --ce-space-18: clamp(14px, 4.5cqi, 22px);
+    --ce-space-20: clamp(16px, 5cqi, 24px);
+    --ce-space-24: clamp(20px, 6cqi, 32px);
+    --ce-space-28: clamp(24px, 7cqi, 36px);
+    --ce-space-32: clamp(28px, 8cqi, 40px);
+    --ce-space-36: clamp(30px, 9cqi, 44px);
+    --ce-space-40: clamp(32px, 10cqi, 48px);
+    --ce-space-48: clamp(38px, 12cqi, 56px);
+    --ce-space-60: clamp(48px, 15cqi, 72px);
+
+    --ce-font-xxs: clamp(0.5rem, 2.5cqi, 0.75rem);
+    --ce-font-xs: clamp(0.55rem, 2.88cqi, 0.85rem);
+    --ce-font-sm: clamp(0.6rem, 3cqi, 0.9rem);
+    --ce-font-base: clamp(0.65rem, 3.2cqi, 0.95rem);
+    --ce-font-md: clamp(0.7rem, 3.4cqi, 1rem);
+    --ce-font-lg: clamp(0.75rem, 3.6cqi, 1.1rem);
+    --ce-font-xl: clamp(0.8rem, 3.8cqi, 1.15rem);
+    --ce-font-2xl: clamp(0.85rem, 4cqi, 1.2rem);
+    --ce-font-3xl: clamp(0.9rem, 4.08cqi, 1.25rem);
+}
+
+$z-index-base: 1;
+$z-index-header-overlay: 10;
+$z-index-window-header: 10;
+$z-index-suggester-backdrop: 15;
+$z-index-suggester-elevated: 20;
+$z-index-header-search: 30;
+$z-index-modal-backdrop: 100;
+$z-index-resize-handle: 102;
+$z-index-photo-view: 2000;
+
+$z-index-window-root: 9999;
+$z-index-window-drag: 10000;
+$z-index-window-ghost: 10001;
+$z-index-dropdown: 10002;
+
+$color-lavender: #B57EDC;
+
+$color-system-blue: #007aff;
+$color-system-green: #34c759;
+$color-system-red: #ff3b30;
+$color-system-orange: #ff9500;
+$color-system-purple: #af52de;
+$color-system-yellow: #ffcc00;
+$color-system-cyan: #55bef0;
+
+$radius-s: 4px;
+$radius-sm: 6px;
+$radius-m: 8px;
+$radius-l: 12px;
