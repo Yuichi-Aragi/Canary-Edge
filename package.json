@@ -1,6 +1,6 @@
 {
   "name": "canary-edge",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "An advanced plugin testing and version control utility. Features deep release selection, pre-flight changelog audits, compatibility verification, and granular overrides.",
   "author": "Yuichi-Aragi",
   "license": "MIT",
