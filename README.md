@@ -93,7 +93,7 @@ Unlike BRAT, you do not need to constantly hunt down full repository URLs or gue
 ---
 
 ### 4. Dashboard Context Actions
-In the Dashboard section, you can **right-click** (desktop) or **press and hold** (mobile) on any tracked plugin to open a dedicated context drop-down menu with quick-action utilities:
+In the Dashboard section, you can **right-click** (desktop) or **press and hold** (mobile) on any tracked plugin's title to open a dedicated context drop-down menu with quick-action utilities:
 *   **Copy the repository url:** Instantly grab the clean repository URL to your clipboard.
 *   **Open a feature request:** Navigate directly to the repository's feature request creation page.
 *   **Open an issue:** Open a new GitHub issue ticket directly in your browser.
