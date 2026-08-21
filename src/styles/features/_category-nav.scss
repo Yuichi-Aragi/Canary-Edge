@@ -1,1 +1,54 @@
+@use "../abstracts/index" as *;
 
+.ce-category-selector {
+    @extend %surface-primary;
+    padding: var(--ce-space-8) var(--ce-space-12);
+    @extend %flex-between;
+    margin-bottom: var(--ce-space-8);
+    width: 100%;
+
+    .ce-category-title-group {
+        @extend %flex-row-center;
+
+        .ce-category-current {
+            @extend %text-semibold-normal;
+            font-size: var(--ce-font-xl);
+        }
+    }
+
+    .ce-category-actions {
+        @extend %flex-row-center;
+        gap: var(--ce-space-6);
+    }
+
+    .ce-category-add-btn {
+        @extend %hamburger-btn;
+        color: var(--interactive-accent);
+
+        &:hover:not(:disabled) {
+            color: var(--interactive-accent);
+            background-color: var(--background-modifier-hover);
+        }
+
+        &:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+    }
+
+    .ce-category-hamburger {
+        @extend %hamburger-btn;
+
+        &[data-state="open"] {
+            color: var(--interactive-accent);
+            background-color: var(--background-modifier-hover);
+        }
+    }
+}
+
+.ce-category-content-area {
+    @extend %flex-col;
+    gap: var(--ce-space-8);
+    min-height: 180px; 
+    width: 100%;
+}

@@ -1,0 +1,337 @@
+@use "../abstracts/index" as *;
+
+.mod-settings-panel {
+    @extend %flex-col;
+    gap: var(--ce-space-10);
+    padding: var(--ce-space-6) var(--ce-space-8); 
+    max-width: 800px;
+    width: 100%;
+}
+
+.ce-changelog-panel-container {
+    @extend %flex-col;
+    gap: var(--ce-space-10);
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    align-items: center;
+    box-sizing: border-box;
+    will-change: transform, opacity;
+
+    .ce-dashboard-card-wrapper {
+        width: 100%;
+        max-width: 800px;
+        box-sizing: border-box;
+    }
+}
+
+.ce-plugin-settings-view,
+.ce-settings-grid {
+    @extend %flex-col;
+    gap: var(--ce-space-8);
+    width: 100%;
+}
+
+.ce-settings-box {
+    @extend %card-base;
+    @extend %flex-col;
+    gap: var(--ce-space-6);
+    padding: var(--ce-space-10) var(--ce-space-12);
+    width: 100%;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+
+    &.mod-disabled {
+        opacity: 0.6;
+        pointer-events: none;
+        
+        .checkbox-container {
+            cursor: not-allowed;
+        }
+    }
+
+    &.mod-busy-state {
+        border: 1px solid var(--interactive-accent);
+        background-color: rgba(var(--interactive-accent-rgb), 0.1);
+        
+        .ce-settings-box-row.mod-title {
+            color: var(--interactive-accent);
+        }
+    }
+
+    .ce-settings-box-header {
+        @extend %flex-row-center;
+        gap: var(--ce-space-10);
+        width: 100%;
+
+        .ce-settings-icon-wrapper {
+            @extend %flex-center;
+            width: var(--ce-space-24);
+            height: var(--ce-space-24);
+            border-radius: 5px;
+            flex-shrink: 0;
+
+            @include apply-icon-variants;
+
+            svg {
+                width: var(--ce-space-14);
+                height: var(--ce-space-14);
+                stroke-width: 2.2px;
+            }
+        }
+
+        .ce-settings-box-title {
+            @extend %text-semibold-normal;
+            font-size: var(--ce-font-lg);
+            line-height: 1.2;
+        }
+    }
+
+    .ce-settings-box-description {
+        font-size: var(--ce-font-base);
+        line-height: 1.4;
+        color: var(--text-muted);
+        padding-left: 1px; 
+    }
+
+    .ce-settings-box-footer {
+        @extend %flex-between;
+        gap: var(--ce-space-12);
+        margin-top: var(--ce-space-2);
+        padding-left: 1px; 
+
+        .ce-settings-global-hint {
+            font-size: var(--ce-font-xs);
+            color: var(--text-faint);
+            @extend %ellipsis;
+            flex: 1;
+            
+            strong {
+                color: var(--text-muted);
+                font-weight: 600;
+            }
+        }
+
+        .ce-settings-control-wrapper {
+            flex-shrink: 0;
+            display: flex;
+            justify-content: flex-end;
+            min-width: 45px;
+
+            button.ce-version-card,
+            button.ce-secret-card,
+            .ce-version-card,
+            .ce-secret-card {
+                background: var(--background-primary);
+                background-color: var(--background-primary);
+                border: 1px solid var(--background-modifier-border);
+                box-shadow: none;
+
+                &:hover:not(:disabled) {
+                    background: var(--background-modifier-hover);
+                    background-color: var(--background-modifier-hover);
+                    border-color: var(--background-modifier-border-hover);
+                }
+            }
+        }
+    }
+}
+
+.ce-settings-note {
+    padding: var(--ce-space-8);
+    text-align: center;
+    opacity: 0.7;
+    font-size: var(--ce-font-base);
+}
+
+.ce-pat-container {
+    width: 100%;
+    @extend %flex-col;
+    gap: var(--ce-space-12);
+
+    &.mod-compact {
+        width: 220px;
+    }
+}
+
+button.ce-secret-card,
+.ce-secret-card {
+    @extend %action-card;
+    appearance: none;
+    background: var(--background-primary);
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: $radius-s;
+    box-shadow: none;
+    color: var(--text-normal);
+
+    &:hover:not(:disabled) {
+        background: var(--background-modifier-hover);
+        background-color: var(--background-modifier-hover);
+        border-color: var(--background-modifier-border-hover);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--interactive-accent);
+        outline-offset: 1px;
+    }
+
+    .ce-secret-name {
+        @extend %mono-value;
+        font-size: var(--ce-font-lg);
+        color: var(--text-normal);
+        @extend %ellipsis;
+        flex: 1;
+        text-align: left;
+    }
+
+    .ce-secret-chevron {
+        @extend %icon-s;
+        color: var(--text-muted);
+        opacity: 0.6;
+        margin-left: var(--ce-space-8);
+        margin-bottom: var(--ce-space-6);
+    }
+}
+
+button.ce-version-card,
+.ce-version-card {
+    @extend %action-card;
+    appearance: none;
+    width: 160px;
+    background: var(--background-primary);
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: $radius-s;
+    box-shadow: none;
+    color: var(--text-normal);
+
+    &:hover:not(:disabled) {
+        background: var(--background-modifier-hover);
+        background-color: var(--background-modifier-hover);
+        border-color: var(--background-modifier-border-hover);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--interactive-accent);
+        outline-offset: 1px;
+    }
+
+    .ce-version-name {
+        font-size: var(--ce-font-lg);
+        color: var(--text-normal);
+        @extend %ellipsis;
+        flex: 1;
+        text-align: left;
+    }
+
+    .ce-version-chevron {
+        @extend %icon-s;
+        color: var(--text-muted);
+        opacity: 0.6;
+        margin-left: var(--ce-space-8);
+        margin-bottom: var(--ce-space-6);
+    }
+}
+
+.ce-full-width-slider {
+    display: block;
+    margin: 0;
+    width: 100%;
+}
+
+.ce-version-installer-container {
+    @extend %flex-row-center;
+    gap: var(--ce-space-8);
+
+    button.ce-version-card,
+    .ce-version-card {
+        background: var(--background-primary);
+        background-color: var(--background-primary);
+        border: 1px solid var(--background-modifier-border);
+        box-shadow: none;
+
+        &:hover:not(:disabled) {
+            background: var(--background-modifier-hover);
+            background-color: var(--background-modifier-hover);
+            border-color: var(--background-modifier-border-hover);
+        }
+    }
+
+    button:not(.ce-version-card) {
+        background: transparent;
+        background-color: transparent;
+        text-transform: uppercase;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        border-radius: $radius-s;
+        box-shadow: none;
+        border-color: transparent;
+        border: transparent;
+        padding: var(--ce-space-4) var(--ce-space-12);
+        height: var(--ce-space-40);
+        transition: background-color 0.15s ease, color 0.15s ease;
+
+        &.mod-cta {
+            border-color: transparent;
+            border: transparent;
+            color: var(--interactive-accent);
+
+            &:hover:not(:disabled) {
+                background-color: rgba(var(--interactive-accent-rgb), 0.1);
+            }
+        }
+
+        &.mod-warning {
+            border-color: transparent;
+            border: transparent;
+            color: $color-system-orange;
+
+            &:hover:not(:disabled) {
+                background-color: rgba($color-system-orange, 0.1);
+            }
+
+            &.mod-destructive {
+                border-color: transparent;
+                border: transparent;
+                color: var(--text-error);
+
+                &:hover:not(:disabled) {
+                    background-color: rgba($color-system-red, 0.1);
+                }
+            }
+        }
+
+        &:not(.mod-cta):not(.mod-warning) {
+            border-color: transparent;
+            border: transparent;
+            color: var(--text-normal);
+
+            &:hover:not(:disabled) {
+                background-color: var(--background-modifier-hover);
+            }
+        }
+
+        &:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+    }
+}
+
+.ce-changelog-actions-card,
+.ce-install-actions-card {
+    @extend %card-base;
+    @extend %flex-row-center;
+    justify-content: flex-end;
+    align-items: center;
+    width: 100%;
+    padding: var(--ce-space-10) var(--ce-space-12);
+
+    .ce-changelog-actions-buttons,
+    .ce-install-actions-buttons {
+        @extend %flex-row-center;
+        @extend %modal-action-buttons;
+        gap: var(--ce-space-8);
+        flex-shrink: 0;
+    }
+}

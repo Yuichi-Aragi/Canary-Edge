@@ -1,0 +1,46 @@
+@use "../abstracts/index" as *;
+
+.ce-header-search-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--ce-space-40);
+  background-color: var(--background-primary);
+  @extend %flex-row-center;
+  z-index: $z-index-header-search;
+  padding: 0;
+  border-radius: var(--radius-s);
+  border-bottom: 1px solid transparent;
+
+  .ce-header-search-icon {
+    @extend %icon-s;
+    margin-left: var(--ce-space-8);
+    margin-bottom: var(--ce-space-8);
+    opacity: 0.5;
+  }
+
+  .ce-header-search-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: var(--ce-font-xl);
+    color: var(--text-normal);
+    padding: 0 var(--ce-space-8);
+    height: 100%;
+    &:focus { box-shadow: none; border: none; }
+  }
+
+  .ce-search-close-btn {
+    @extend %button-reset;
+    color: var(--text-muted);
+    padding: var(--ce-space-8);
+    @extend %flex-row-center;
+    
+    &:hover { 
+      color: var(--text-normal); 
+      background-color: var(--background-modifier-hover); 
+    }
+  }
+}
