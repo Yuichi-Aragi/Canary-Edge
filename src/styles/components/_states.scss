@@ -1,0 +1,52 @@
+@use "../abstracts/index" as *;
+
+.ce-state-container {
+  @extend %flex-center;
+  height: 100%;
+  flex-direction: column;
+  gap: var(--ce-space-16);
+  color: var(--text-muted);
+  padding: var(--ce-space-20);
+  text-align: center;
+
+  .ce-state-icon {
+    width: var(--ce-space-32);
+    height: var(--ce-space-32);
+  }
+
+  &.ce-state-error {
+    color: var(--text-error);
+  }
+}
+
+.ce-error-boundary {
+  height: 100%;
+  @extend %flex-col;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ce-space-16);
+  padding: var(--ce-space-20);
+  text-align: center;
+  color: var(--text-muted);
+
+  .ce-error-icon {
+    width: var(--ce-space-48);
+    height: var(--ce-space-48);
+    color: var(--text-error);
+    opacity: 0.8;
+  }
+
+  .ce-error-message {
+    background-color: var(--background-secondary);
+    padding: var(--ce-space-12);
+    border-radius: $radius-sm;
+    font-family: var(--font-monospace);
+    font-size: var(--ce-font-md);
+    color: var(--text-error);
+    max-width: 90%;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    border: 1px solid var(--background-modifier-border);
+  }
+}

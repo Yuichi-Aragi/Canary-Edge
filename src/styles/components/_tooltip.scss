@@ -1,0 +1,23 @@
+@use "../abstracts/index" as *;
+
+.ce-tooltip-content {
+  background-color: var(--background-secondary-alt);
+  color: var(--text-normal);
+  border: 1px solid var(--background-modifier-border);
+  padding: var(--ce-space-8) var(--ce-space-12);
+  border-radius: $radius-sm;
+  font-size: var(--ce-font-md);
+  box-shadow: var(--shadow-s);
+  z-index: $z-index-dropdown;
+  max-width: 300px;
+  animation: ce-fade-in 0.1s ease-out;
+  @extend %contain-layout-style;
+
+  &.mod-input-tooltip {
+    z-index: 10005;
+  }
+
+  .tooltip-arrow {
+    fill: var(--background-modifier-border);
+  }
+}

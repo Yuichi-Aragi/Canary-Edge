@@ -1,1 +1,25 @@
+@use "../abstracts/index" as *;
 
+.ce-tag {
+  @extend %badge-base;
+  font-size: var(--ce-font-xs);
+  padding: 1px var(--ce-space-4);
+  background-color: var(--background-modifier-border);
+  color: var(--text-muted);
+
+  &.mod-error { background-color: var(--background-modifier-error); color: var(--text-on-accent); }
+  &.mod-frozen { background-color: var(--interactive-accent); color: var(--text-on-accent); }
+  &.mod-version { @extend %surface-primary; }
+}
+
+.ce-filter-container {
+  @extend %flex-row-center;
+  gap: var(--ce-space-4);
+
+  .ce-filter-badge {
+    @extend %badge-base;
+    font-size: var(--ce-font-xxs);
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+  }
+}

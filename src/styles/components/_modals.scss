@@ -1,0 +1,112 @@
+@use "../abstracts/index" as *;
+
+.ce-modal-actions {
+  @extend %flex-row-center;
+  justify-content: flex-end;
+  gap: var(--ce-space-10);
+  margin-top: var(--ce-space-12);
+
+  &.mod-compact {
+    margin-top: var(--ce-space-6);
+  }
+}
+
+.ce-confirm-box {
+  @extend %card-base;
+  @extend %flex-col;
+  gap: var(--ce-space-12);
+  padding: var(--ce-space-16);
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+
+  .ce-confirm-header {
+    @extend %flex-row-center;
+    gap: var(--ce-space-10);
+    width: 100%;
+
+    .ce-confirm-icon-wrapper {
+      @extend %flex-center;
+      width: var(--ce-space-24);
+      height: var(--ce-space-24);
+      border-radius: $radius-s;
+      flex-shrink: 0;
+      background-color: rgba($color-system-blue, 0.1);
+      color: var(--interactive-accent);
+
+      svg {
+        width: var(--ce-space-14);
+        height: var(--ce-space-14);
+        stroke-width: 2.2px;
+      }
+    }
+
+    .ce-confirm-title {
+      @extend %text-semibold-normal;
+      font-size: var(--ce-font-xl);
+      line-height: 1.2;
+    }
+  }
+
+  .ce-confirm-message {
+    @extend %text-muted-sm;
+    line-height: 1.4;
+    padding-left: 1px;
+
+    code {
+      background-color: var(--background-secondary);
+      color: var(--text-accent);
+      padding: 1px var(--ce-space-4);
+      border-radius: $radius-s;
+      font-family: var(--font-monospace);
+    }
+  }
+
+  .ce-modal-actions {
+    @extend %modal-action-buttons;
+  }
+}
+
+.ce-dashboard-card-wrapper.mod-confirm-panel {
+  width: 100%;
+  max-width: none;
+  @extend %flex-col;
+  pointer-events: auto;
+  box-sizing: border-box;
+  margin: auto;
+}
+
+.ce-discover-panel-backdrop {
+  animation: none;
+  transition: none;
+
+  &.mod-centered:has(.ce-confirm-panel-override),
+  &.mod-centered:has(.mod-confirm-panel) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.45);
+    z-index: $z-index-modal-backdrop;
+    pointer-events: auto;
+  }
+}
+
+.ce-discover-panel-scroll-wrapper {
+  animation: none;
+  transition: none;
+
+  &.ce-confirm-panel-override {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    box-sizing: border-box;
+    padding: var(--ce-space-16);
+  }
+}

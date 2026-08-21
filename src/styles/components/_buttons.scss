@@ -1,0 +1,61 @@
+@use "../abstracts/index" as *;
+
+button.ce-hamburger-btn {
+  @extend %hamburger-btn;
+  background: transparent;
+  background-color: transparent;
+}
+
+button.ce-icon-button {
+  @extend %button-reset;
+  @extend %flex-center;
+  min-width: var(--ce-space-24);
+  height: var(--ce-space-24);
+  padding: var(--ce-space-2) var(--ce-space-6);
+  background: transparent;
+  background-color: transparent;
+  opacity: 0.7;
+
+  &:hover:not(:disabled) {
+    opacity: 1;
+    background-color: var(--background-modifier-hover);
+  }
+
+  &.mod-warning,
+  &.mod-destructive {
+    color: var(--text-error);
+
+    &:hover:not(:disabled) {
+      color: var(--text-error);
+      background-color: rgba($color-system-red, 0.1);
+    }
+  }
+}
+
+.ce-bell-button-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+
+  .ce-bell-badge {
+    position: absolute;
+    top: calc(-1 * var(--ce-space-4));
+    right: calc(-1 * var(--ce-space-4));
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+    font-size: var(--ce-font-xxs);
+    font-weight: 700;
+    line-height: 1;
+    padding: var(--ce-space-2) var(--ce-space-6);
+    border-radius: $radius-m;
+    pointer-events: none;
+    box-shadow: 0 0 0 2px var(--background-primary);
+  }
+}
+
+button.mod-button.ce-icon-button,
+.clickable-icon.ce-icon-button,
+.ce-icon-button {
+  background: transparent;
+  background-color: transparent;
+}
