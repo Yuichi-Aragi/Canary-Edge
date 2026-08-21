@@ -1,0 +1,56 @@
+@use "../abstracts/index" as *;
+
+.ce-ce-view {
+  flex: 1;
+  @extend %flex-col;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+
+  .ce-ce-view-content {
+    flex: 1;
+    @extend %flex-col;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  * { @extend %hide-scrollbar; }
+}
+
+.ce-dashboard {
+  flex: 1;
+  @extend %flex-col;
+  height: 100%;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.ce-section-scrollable {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 4px;
+  min-height: 0;
+}
+
+.ce-virtuoso-container {
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+  position: relative;
+  display: block;
+  margin-top: 4px;
+}
+
+.ce-dashboard-card-wrapper {
+  .ce-dashboard-card {
+    margin-bottom: 0;
+    border: none;
+    border-radius: 0;
+    background-color: transparent;
+  }
+  
+  &.mod-spaced {
+    margin-bottom: 8px;
+  }
+}

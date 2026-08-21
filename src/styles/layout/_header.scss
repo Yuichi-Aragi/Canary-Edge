@@ -1,0 +1,126 @@
+@use "../abstracts/index" as *;
+
+.ce-settings-header-wrapper {
+  @extend %flex-col;
+  gap: 0; 
+  padding: 0 0 var(--ce-space-8) 0;
+  margin-bottom: var(--ce-space-8);
+  border-bottom: 1px solid var(--background-modifier-border);
+  flex-shrink: 0;
+  position: relative;
+
+  .ce-header-row-top {
+    @extend %flex-between;
+    width: 100%;
+    height: var(--ce-space-36);
+  }
+
+  .ce-header-row-bottom {
+    @extend %flex-between;
+    align-items: flex-end;
+    width: 100%;
+    min-height: var(--ce-space-20);
+  }
+
+  .ce-header-left {
+    @extend %flex-row-center;
+    gap: var(--ce-space-12);
+  }
+
+  .ce-header-right {
+    @extend %flex-row-center;
+    gap: var(--ce-space-4);
+  }
+}
+
+.ce-section-title {
+  font-size: var(--ce-font-md);
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0;
+  line-height: 1;
+  @extend %ellipsis;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: flex-end;
+}
+
+.ce-title-toggle-btn {
+  @extend %button-reset;
+  font: inherit;
+  color: inherit;
+  text-transform: inherit;
+  background: transparent;
+  background-color: transparent;
+  outline: none;
+  box-shadow: none;
+  text-align: left;
+  
+  display: inline-block;
+  line-height: 1;
+  height: auto;
+  vertical-align: bottom;
+  
+  &:hover, 
+  &:active, 
+  &:focus {
+    background: transparent;
+    background-color: transparent;
+    color: inherit;
+    outline: none;
+    box-shadow: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--interactive-accent);
+    outline-offset: 2px;
+    border-radius: $radius-s;
+  }
+}
+
+.ce-header-info-text {
+  font-size: var(--ce-font-base);
+  color: var(--text-faint);
+  font-weight: 500;
+  line-height: 1;
+}
+
+.ce-ce-window-controls {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--ce-space-6);
+
+  .clickable-icon {
+    min-width: 36px;
+    min-height: 36px;
+    padding: var(--ce-space-4);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: $radius-s;
+    transition: background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: 2px solid var(--interactive-accent);
+      outline-offset: 1px;
+    }
+
+    &:hover:not(:disabled) {
+      background-color: var(--background-modifier-hover);
+      color: var(--text-normal);
+    }
+
+    &:active:not(:disabled) {
+      opacity: 0.7;
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+  }
+}

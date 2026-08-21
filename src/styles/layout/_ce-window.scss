@@ -1,1 +1,283 @@
+@use "../abstracts/index" as *;
 
+.ce-window-root {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: $z-index-window-root;
+    
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+    will-change: width, height, top, left, transform;
+    
+    [class*="-btn"] {
+        -webkit-tap-highlight-color: transparent;
+        pointer-events: auto;
+        
+        transition: opacity 0.1s ease;
+        &:active {
+            opacity: 0.5;
+        }
+    }
+}
+
+.ce-window-animator {
+    position: absolute;
+    top: 50px;
+    left: 16px;
+    right: 16px;
+    bottom: 24px;
+    pointer-events: none;
+    will-change: transform, opacity;
+}
+
+:global(body.ce-window-interacting),
+:global(body.ce-menu-interacting) {
+    pointer-events: none;
+    user-select: none;
+    
+    * {
+        transition: none;
+        animation: none;
+    }
+
+    .ce-window-root,
+    .ce-window-root *,
+    .ce-discover-panel-backdrop,
+    .ce-discover-panel-scroll-wrapper,
+    .ce-command-palette-card,
+    .ce-version-card,
+    .ce-secret-card,
+    .ce-input-card {
+        pointer-events: auto;
+    }
+
+    [role="listbox"],
+    [role="dialog"],
+    [role="menu"],
+    .ce-dropdown-content,
+    .ce-tooltip-content {
+        pointer-events: auto;
+    }
+}
+
+:global(body.ce-window-interacting) {
+    cursor: grabbing;
+}
+
+:global(body.ce-window-interacting) .workspace,
+:global(body.ce-menu-interacting) .workspace {
+    pointer-events: none;
+    user-select: none;
+    contain: paint layout size;
+    will-change: transform;
+}
+
+.ce-ce-window {
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    overflow: visible; 
+    touch-action: none;
+    position: absolute;
+    z-index: $z-index-window-root;
+    
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    contain: layout style size;
+    will-change: transform, width, height;
+
+    &.is-dragging,
+    &.is-resizing {
+        z-index: $z-index-window-drag;
+        
+        .ce-ce-window-content {
+            pointer-events: none;
+            user-select: none;
+        }
+    }
+
+    &.is-dragging { cursor: grabbing; }
+    &.is-resizing { 
+        cursor: nwse-resize; 
+    }
+}
+
+.ce-window-ghost {
+    position: absolute;
+    top: 0;
+    left: 0;
+    border: 2px dashed var(--interactive-accent);
+    box-shadow: 0 0 12px rgba(var(--interactive-accent-rgb), 0.25);
+    border-radius: $radius-m;
+    pointer-events: none;
+    z-index: $z-index-window-ghost;
+    display: block;
+    box-sizing: border-box;
+    opacity: 0;
+    
+    contain: strict;
+    will-change: transform, width, height, opacity;
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+
+    &.is-visible {
+        display: block;
+    }
+}
+
+.ce-ce-window-two-card-layout {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ce-space-6);
+    width: 100%;
+    height: 100%;
+}
+
+.ce-ce-window-header {
+    height: 44px;
+    @extend %surface-secondary;
+    @extend %flex-between;
+    padding: 0 var(--ce-space-16);
+    cursor: grab;
+    flex-shrink: 0;
+    z-index: $z-index-window-header;
+    @extend %contain-layout-style;
+    user-select: none;
+
+    &:active { cursor: grabbing; }
+
+    &:focus-visible {
+        outline: 2px solid var(--interactive-accent);
+        outline-offset: -2px;
+        border-radius: $radius-m;
+    }
+}
+
+.ce-ce-window-content {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    @extend %surface-primary;
+    @extend %flex-col;
+    padding: var(--ce-space-8) var(--ce-space-14);
+    @extend %contain-layout-style;
+    overflow: hidden;
+
+    container-type: inline-size;
+    container-name: ce-window;
+    
+    &.is-frozen {
+        contain: strict;
+        pointer-events: none;
+        user-select: none;
+        will-change: transform, opacity;
+        background-color: var(--background-primary);
+
+        * {
+            pointer-events: none;
+            transition: none;
+            animation: none;
+        }
+    }
+}
+
+.ce-resize-handle-br {
+    position: absolute;
+    width: 32px;
+    height: 32px;
+    bottom: -4px;
+    right: -4px;
+    cursor: nwse-resize;
+    z-index: $z-index-resize-handle; 
+    background: transparent;
+    
+    &::after {
+        content: "";
+        position: absolute;
+        bottom: 12px;
+        right: 12px;
+        width: 8px;
+        height: 8px;
+        border-right: 2px solid var(--interactive-accent);
+        border-bottom: 2px solid var(--interactive-accent);
+        opacity: 0.4;
+    }
+}
+
+.ce-discover-panel-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #{'color-mix(in srgb, var(--background-primary) 90%, transparent)'};
+    backdrop-filter: none;
+    z-index: $z-index-modal-backdrop;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-radius: inherit;
+    
+    &.mod-centered {
+        align-items: center;
+        justify-content: center;
+    }
+}
+
+.ce-discover-panel-scroll-wrapper {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: var(--ce-space-12) var(--ce-space-16);
+    box-sizing: border-box;
+    gap: var(--ce-space-10);
+    pointer-events: auto;
+    @extend %hide-scrollbar;
+
+    .ce-dashboard-card-wrapper {
+        width: 100%;
+        max-width: 800px;
+        @extend %flex-col;
+        pointer-events: none;
+        box-sizing: border-box;
+
+        > * {
+            pointer-events: auto;
+        }
+
+        .ce-dashboard-card {
+            @extend %surface-primary;
+            padding: var(--ce-space-10) var(--ce-space-12);
+            margin-bottom: 0;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .ce-input-card {
+            border-radius: 8px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        &.mod-settings-panel {
+            @extend %card-base;
+            pointer-events: auto;
+            padding: var(--ce-space-8) var(--ce-space-10);
+            border-radius: 8px;
+            box-sizing: border-box;
+            width: 100%;
+            max-width: 800px;
+        }
+    }
+}
