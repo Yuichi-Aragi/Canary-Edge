@@ -1,0 +1,159 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'manifest.json'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write 
+
+jobs:
+  build-and-release:
+    if: github.ref_name == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    outputs:
+      is_beta: ${{ steps.version-manager.outputs.is_beta }}
+      version: ${{ steps.version-manager.outputs.version }}
+      version_file: ${{ steps.version-manager.outputs.version_file }}
+      committed: ${{ steps.commit.outputs.committed }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          check-latest: true
+
+      - name: Configure Git Identity
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Configure pnpm to allow esbuild scripts
+        run: echo 'allowed-dep-scripts=esbuild' >> .npmrc
+
+      - name: Clean up npm lockfile
+        run: |
+          if [ -f "package-lock.json" ]; then
+            rm package-lock.json
+          fi
+
+      - name: Analyze lockfile state
+        id: lockfile
+        run: |
+          if [ ! -f "pnpm-lock.yaml" ]; then
+            echo "action=generate" >> "$GITHUB_OUTPUT"
+          elif pnpm install --lockfile-only --prefer-frozen-lockfile 2>/dev/null; then
+            echo "action=frozen" >> "$GITHUB_OUTPUT"
+          else
+            echo "action=update" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install dependencies
+        id: install
+        run: |
+          case "${{ steps.lockfile.outputs.action }}" in
+            generate|update)
+              pnpm install
+              echo "changed=true" >> "$GITHUB_OUTPUT"
+              ;;
+            frozen)
+              pnpm install --frozen-lockfile
+              echo "changed=false" >> "$GITHUB_OUTPUT"
+              ;;
+          esac
+
+      - name: Run version manager
+        id: version-manager
+        run: |
+          node ./version-manager.mjs
+          
+          MANIFEST_VERSION=$(jq -r '.version' manifest.json)
+          IS_BETA="false"
+          if [[ "$MANIFEST_VERSION" =~ -beta\.[0-9]+$ ]]; then
+            IS_BETA="true"
+          fi
+          
+          echo "is_beta=$IS_BETA" >> "$GITHUB_OUTPUT"
+          echo "version=$MANIFEST_VERSION" >> "$GITHUB_OUTPUT"
+          echo "version_file=$([ "$IS_BETA" = "true" ] && echo "version-beta.json" || echo "versions.json")" >> "$GITHUB_OUTPUT"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+
+      - name: Stage changes
+        id: stage
+        run: |
+          # Stage lockfile
+          if [ "${{ steps.install.outputs.changed }}" = "true" ]; then
+            git add pnpm-lock.yaml
+          fi
+          
+          # Stage version files
+          VERSION_FILE="${{ steps.version-manager.outputs.version_file }}"
+          if [ -f "$VERSION_FILE" ]; then
+            git add "$VERSION_FILE"
+          fi
+          
+          if [ "${{ steps.version-manager.outputs.is_beta }}" != "true" ]; then
+            git add package.json
+          fi
+
+          # Only proceed if there are actual diffs to commit
+          if git diff --staged --quiet; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit and push
+        id: commit
+        if: steps.stage.outputs.has_changes == 'true'
+        run: |
+          VERSION="${{ steps.version-manager.outputs.version }}"
+          IS_BETA="${{ steps.version-manager.outputs.is_beta }}"
+          
+          # Build clean message
+          MSG="chore(release): "
+          [ "$IS_BETA" = "true" ] && MSG="${MSG}beta "
+          MSG="${MSG}v${VERSION}"
+          
+          [ "${{ steps.install.outputs.changed }}" = "true" ] && MSG="$MSG [lockfile]"
+          
+          # Commit with --allow-empty as a safety net
+          git commit -m "$MSG" --allow-empty
+          
+          # Pull latest to avoid push rejection (non-fast-forward)
+          git pull --rebase origin main
+          
+          # Push back to the triggering branch
+          git push origin HEAD:main
+          
+          echo "committed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Generate summary
+        if: always()
+        run: |
+          echo "## 📋 Build Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Property | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|----------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **Version** | ${{ steps.version-manager.outputs.version || 'N/A' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **Status** | ${{ job.status == 'success' && '✅ Success' || '❌ Failed' }} |" >> "$GITHUB_STEP_SUMMARY"
