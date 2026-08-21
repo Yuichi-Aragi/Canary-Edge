@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'manifest.json'
   schedule:
     - cron: '44 4 * * 2'
 
