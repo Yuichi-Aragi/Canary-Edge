@@ -30,12 +30,12 @@ export class IndexedDBService {
 	private disposed = false;
 
 	public async countCommunityPlugins(): Promise<Result<number>> {
-		return await this.safeCtx.async<number>(async ($) => {
+		return this.safeCtx.async<number>(async ($) => {
 			$.checkpoint();
 
 			const count = $(
 				await safe.tryAsync(async (): Promise<number> => {
-					return await this.db.communityPlugins.count();
+					return this.db.communityPlugins.count();
 				}),
 			);
 			return count;
@@ -43,7 +43,7 @@ export class IndexedDBService {
 	}
 
 	public async hasCommunityPlugins(): Promise<Result<boolean>> {
-		return await this.safeCtx.async<boolean>(async ($) => {
+		return this.safeCtx.async<boolean>(async ($) => {
 			$.checkpoint();
 
 			const count = $(await this.countCommunityPlugins());
@@ -52,7 +52,7 @@ export class IndexedDBService {
 	}
 
 	public async saveCommunityPlugins(plugins: readonly CommunityPlugin[]): Promise<Result<undefined>> {
-		return await this.safeCtx.async<undefined>(async ($) => {
+		return this.safeCtx.async<undefined>(async ($) => {
 			$.checkpoint();
 
 			$(
@@ -78,12 +78,12 @@ export class IndexedDBService {
 	}
 
 	public async getCommunityPlugins(): Promise<Result<CommunityPlugin[]>> {
-		return await this.safeCtx.async<CommunityPlugin[]>(async ($) => {
+		return this.safeCtx.async<CommunityPlugin[]>(async ($) => {
 			$.checkpoint();
 
 			const plugins = $(
 				await safe.tryAsync(async (): Promise<CachedCommunityPlugin[]> => {
-					return await this.db.communityPlugins.toArray();
+					return this.db.communityPlugins.toArray();
 				}),
 			);
 			return plugins;
@@ -91,7 +91,7 @@ export class IndexedDBService {
 	}
 
 	public async getPluginByIdOrRepo(repoOrName: string): Promise<Result<CommunityPlugin | undefined>> {
-		return await this.safeCtx.async<CommunityPlugin | undefined>(async ($) => {
+		return this.safeCtx.async<CommunityPlugin | undefined>(async ($) => {
 			$.checkpoint();
 
 			const normalized = repoOrName.trim().toLowerCase();
@@ -125,7 +125,7 @@ export class IndexedDBService {
 	}
 
 	public dispose(): void {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			return;
 		}
 		this.disposed = true;
