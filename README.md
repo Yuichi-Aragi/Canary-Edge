@@ -1,3 +1,5 @@
+[![Security scan](https://github.com/Yuichi-Aragi/Canary-Edge/actions/workflows/codeql.yml/badge.svg)](https://github.com/Yuichi-Aragi/Canary-Edge/actions/workflows/codeql.yml)
+
 ***
 
 # Canary Edge
@@ -16,7 +18,6 @@ Canary Edge (CE) is a modern alternative plugin built in direct response to BRAT
 *   **Prior Experience Required:** If you have never used BRAT or a third-party plugin manager before, **please avoid Canary Edge**. Without prior experience, CE's density and granular control can be overwhelming.
 *   **Keep It Simple if You Don't Need This:** If the official plugin manager and BRAT already satisfy your use case and you don't want any added complexity, please avoid installing CE.
 
----
 
 ## The Middle Ground
 
@@ -26,7 +27,7 @@ Canary Edge occupies the space between basic utility and over-engineered decorat
 *   **Not a Full-Fledged Plugin Manager:** CE does not aim to replace Obsidian's core plugin manager or act as a total vault organizer. It stays strictly a single-purpose tool—just like BRAT—focused on tracking, testing, and controlling non-store or beta plugin releases.
 *   **Vs. Other Managers:** Many third-party tools focus heavily on visual organization and aesthetic decoration. **CE rejects this.** There is no renaming of plugins, no custom descriptions, and no theme support. CE is solely focused on plugin UX, execution control, and functional diagnostics.
 
----
+
 
 ## The Concept & Aesthetic Philosophy
 
@@ -39,7 +40,7 @@ The visual aesthetic of Canary Edge is a deliberate design choice. It was not cr
 ### Mobile-First from Day One
 Unlike many power-user tools that treat mobile as an afterthought, Canary Edge was built with a **mobile-first architecture**. The UI is optimized for touch targets, gesture-based navigation, and responsive layouts. Whether you are on a 32-inch monitor or a 6-inch phone, the "cockpit" remains fully functional, ensuring mobile debugging is never a second-class experience.
 
----
+
 
 ## Key Features
 
@@ -55,7 +56,7 @@ By default, CE delivers a comprehensive **global and per-plugin settings overrid
 *   **Update Control:** Set specific update checks—at a set interval, on startup (`onload`), or both. By default, CE automatically downloads updated assets as soon as a new version is detected; users can disable auto-download in settings if they prefer to receive update notifications only.
 *   **Freeze Plugin:** Lock a plugin at its current working version with a single click to prevent accidental updates.
 
----
+
 
 ### 2. Changelog Workflows & Compatibility Verification
 
@@ -83,21 +84,21 @@ Want to check compatibility when adjusting versions of already tracked plugins?
     4. A **Plugin Card** automatically appears above the selection rendering all relevant release info and the **compatibility tag**.
     5. If you still wish to proceed with an incompatible release, you can adjust that plugin's specific incompatibility overrides (Platform and API Version) to install that version directly without repeated confirmation blockers.
 
----
+
 
 ### 3. Search & Pre-Install Auditing
 Unlike BRAT, you do not need to constantly hunt down full repository URLs or guess what you are pulling:
 *   **Pre-Installation Inspection (README & Changelog):** Inspect the target release's documentation and changelog directly within the panel before committing any files.
 *   **Universal GitHub Scrubbing:** For unlisted repositories, paste almost any GitHub link variation. CE's scrubbing engine handles standard URLs, shorthand (`user/repo`), SSH formats, API endpoints, sub-pages, and raw links automatically.
 
----
+
 
 ### 4. Dashboard Context Actions
 In the Dashboard section, you can **right-click** (desktop) or **press and hold** (mobile) on any tracked plugin's title to open a dedicated context drop-down menu with quick-action utilities:
 *   **Copy the repository url:** Instantly grab the clean repository URL to your clipboard.
 *   **Open a feature request:** Navigate directly to the repository's feature request creation page.
 *   **Open an issue:** Open a new GitHub issue ticket directly in your browser.
----
+
 
 ### 5. Register Untracked Plugins in One Click
 If you already have untracked plugins installed in your vault (whether enabled or disabled), you don't need to pivot back to the native installation panel to register them in CE:
@@ -109,7 +110,14 @@ If you already have untracked plugins installed in your vault (whether enabled o
 
 From here, you can register any installed plugin into CE's tracking engine in a single click.
 
----
+
+## Engineering Standards & Security
+
+Canary Edge is built to the highest standards of modern plugin development. We prioritize security and code health to ensure your vault remains a fortress.
+.
+*   **CodeQL Analysis:** Our codebase is continuously scanned using GitHub’s **CodeQL** to identify vulnerabilities and maintain professional-grade code integrity.
+*   **Obsidian ESLint Compliant:** Canary Edge is fully compliant with official Obsidian ESLint plugin rules, ensuring optimal performance and seamless integration with the host environment.
+
 
 ## What Canary Edge is NOT
 
@@ -121,7 +129,7 @@ To maintain strict focus and high performance, CE intentionally limits its scope
 *   **No Folders or Organization:** CE is an engineering cockpit, not a filing cabinet.
 *   **No Native Skinning:** CE maintains its own distinct, high-contrast functional aesthetic rather than imitating default Obsidian theme styles.
 
----
+
 
 ## Coexistence & BRAT Migration
 
@@ -131,7 +139,7 @@ You can install Canary Edge alongside your existing tools, test it, and decide i
 *   **Non-Destructive:** Removing Canary Edge will never touch your existing BRAT setup or corrupt plugins installed through other means.
 *   **Configurable BRAT Migration:** Upon launch, CE can automatically detect and migrate your tracked plugins from BRAT. If you prefer a clean slate, **automatic BRAT migration can be disabled in settings**.
 
----
+
 
 ## Philosophy & Contribution
 
@@ -147,7 +155,7 @@ However, we believe in open software. If our vision does not align with yours, o
 **Issues & Suggestions**
 While we don't accept external code, we do listen. If you find bugs or have feature requests, feel free to open a GitHub Issue.
 
----
+
 
 ## Support
 
