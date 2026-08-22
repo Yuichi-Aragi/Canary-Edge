@@ -30,14 +30,14 @@ export class GitHubContentService {
 	public constructor(private readonly deps: Readonly<Cradle>) {}
 
 	public dispose(): void {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			return;
 		}
 		this.disposed = true;
 	}
 
 	public async grabCommmunityPluginList(): Promise<Result<CommunityPlugin[] | null>> {
-		return await this.safeCtx.async<CommunityPlugin[] | null>(async () => {
+		return this.safeCtx.async<CommunityPlugin[] | null>(async () => {
 			await assertInternetConnection();
 
 			const url = `${OBSIDIAN_ASSETS_URL}/community-plugins.json`;
@@ -62,7 +62,7 @@ export class GitHubContentService {
 		const safeCtx = safe.from(resolveApiContext(ctx)).bind(this);
 		const effectiveToken = resolveToken(token, ctx);
 
-		return await safeCtx.async<string>(async ($) => {
+		return safeCtx.async<string>(async ($) => {
 			const repoInfo = parseRepositoryPath(repo);
 			if (repoInfo === null) {
 				throw new Error("Invalid repository format. Expected 'owner/repo'.");
@@ -77,7 +77,7 @@ export class GitHubContentService {
 			});
 
 			const contentsData = (contentsRes as { readonly data: unknown }).data;
-			if (Array.isArray(contentsData) === false) {
+			if (!Array.isArray(contentsData)) {
 				throw new Error("Repository root content is not a directory list.");
 			}
 
@@ -119,7 +119,7 @@ export class GitHubContentService {
 		const safeCtx = safe.from(resolveApiContext(ctx)).bind(this);
 		const effectiveToken = resolveToken(token, ctx);
 
-		return await safeCtx.async<string>(async ($) => {
+		return safeCtx.async<string>(async ($) => {
 			const repoInfo = parseRepositoryPath(repo);
 			if (repoInfo === null) {
 				throw new Error("Invalid repository format. Expected 'owner/repo'.");
@@ -161,7 +161,7 @@ export class GitHubContentService {
 				return item.name;
 			})
 			.filter((fileName: string): boolean => {
-				return fileName.toLowerCase().endsWith(".md") === true;
+				return fileName.toLowerCase().endsWith(".md");
 			});
 
 		if (mdFiles.length > 0) {

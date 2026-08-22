@@ -17,7 +17,7 @@ function resolveSecretId(ctx?: OperationContext | Api | AbortSignal, fallbackSec
 	if (fallbackSecretId !== undefined && fallbackSecretId.trim() !== "") {
 		return fallbackSecretId.trim();
 	}
-	if (ctx !== undefined && ctx !== null && "secretId" in ctx && typeof ctx.secretId === "string") {
+	if (ctx !== undefined && "secretId" in ctx && typeof ctx.secretId === "string") {
 		return ctx.secretId.trim();
 	}
 	return "";
@@ -41,9 +41,9 @@ export class GitHubClient {
 			let extractedSignal: AbortSignal | undefined;
 			if (ctx instanceof AbortSignal) {
 				extractedSignal = ctx;
-			} else if (ctx !== undefined && ctx !== null && "signal" in ctx && ctx.signal instanceof AbortSignal) {
+			} else if (ctx !== undefined && "signal" in ctx && ctx.signal instanceof AbortSignal) {
 				extractedSignal = ctx.signal;
-			} else if (ctx !== undefined && ctx !== null && "options" in ctx && ctx.options.signal instanceof AbortSignal) {
+			} else if (ctx !== undefined && "options" in ctx && ctx.options.signal instanceof AbortSignal) {
 				extractedSignal = ctx.options.signal;
 			}
 
@@ -52,13 +52,17 @@ export class GitHubClient {
 				userAgent: "Obsidian/Canary-Edge-Plugin",
 				request: {
 					fetch: async (url: string, options: RequestInit): Promise<Response> => {
-						const activeSignal = options.signal ?? extractedSignal;
+						const rawOptSignal =
+							options.signal !== undefined && options.signal !== null
+								? options.signal
+								: undefined;
+						const activeSignal = rawOptSignal ?? extractedSignal;
 						const mergedOptions: RequestInit =
-							activeSignal !== undefined && activeSignal !== null
+							activeSignal !== undefined
 								? { ...options, signal: activeSignal }
 								: { ...options };
 						const resRes = await this.queuedFetch(url, mergedOptions, safeApi, effectiveSecretId);
-						if (resRes.ok === false) {
+						if (!resRes.ok) {
 							throw resRes.error;
 						}
 						return resRes.value;
@@ -75,10 +79,14 @@ export class GitHubClient {
 		secretId?: string,
 	): Promise<Result<Response, NetworkError>> {
 		const safeCtx = safe.from(parentCtx).bind(this);
-		return await safeCtx.async<Response, NetworkError>(async ($, defer) => {
-			const { signal } = options;
-			if (signal?.aborted === true) {
-				const reason = signal.reason as unknown;
+		return safeCtx.async<Response, NetworkError>(async ($, defer) => {
+			const rawSignal =
+				options.signal !== undefined && options.signal !== null
+					? options.signal
+					: undefined;
+
+			if (rawSignal?.aborted === true) {
+				const reason = rawSignal.reason as unknown;
 				throw reason instanceof Error ? reason : new NetworkError("Request aborted");
 			}
 
@@ -103,20 +111,20 @@ export class GitHubClient {
 				const scheduledRes = await this.deps.concurrencyService.scheduleGitHub<Response, NetworkError>(
 					resourceKey,
 					async (): Promise<Result<Response, NetworkError>> => {
-						if (signal?.aborted === true) {
-							const reason = signal.reason as unknown;
+						if (rawSignal?.aborted === true) {
+							const reason = rawSignal.reason as unknown;
 							return safe.err(
 								reason instanceof NetworkError
 									? reason
 									: new NetworkError(reason instanceof Error ? reason.message : "Request aborted"),
 							);
 						}
-						return await this.performRequest(url, options, safeCtx, secretId);
+						return this.performRequest(url, options, safeCtx, secretId);
 					},
-					{ signal: signal ?? undefined },
+					{ signal: rawSignal },
 				);
 
-				if (scheduledRes.ok === false) {
+				if (!scheduledRes.ok) {
 					const err = scheduledRes.error;
 					throw err instanceof NetworkError ? err : new NetworkError(err instanceof Error ? err.message : String(err));
 				}
@@ -128,23 +136,23 @@ export class GitHubClient {
 				this.pendingRequests.set(dedupeKey, taskPromise);
 			}
 
-			if (signal !== undefined && signal !== null) {
+			if (rawSignal !== undefined) {
 				let abortHandler: (() => void) | undefined;
 				const abortPromise = new Promise<never>((_, reject): void => {
 					abortHandler = (): void => {
-						const reason = signal.reason as unknown;
+						const reason = rawSignal.reason as unknown;
 						reject(
 							reason instanceof NetworkError
 								? reason
 								: new NetworkError(reason instanceof Error ? reason.message : "Request aborted"),
 						);
 					};
-					signal.addEventListener("abort", abortHandler, { once: true });
+					rawSignal.addEventListener("abort", abortHandler, { once: true });
 				});
 
 				defer((): void => {
 					if (abortHandler !== undefined) {
-						signal.removeEventListener("abort", abortHandler);
+						rawSignal.removeEventListener("abort", abortHandler);
 					}
 				});
 
@@ -164,8 +172,12 @@ export class GitHubClient {
 		secretId?: string,
 	): Promise<Result<Response, NetworkError>> {
 		const safeCtx = safe.from(parentCtx).bind(this);
-		return await safeCtx.async<Response, NetworkError>(async ($, defer) => {
-			const effectiveSignal = options.signal ?? safeCtx.options.signal;
+		return safeCtx.async<Response, NetworkError>(async ($, defer) => {
+			const rawSignal =
+				options.signal !== undefined && options.signal !== null
+					? options.signal
+					: undefined;
+			const effectiveSignal = rawSignal ?? safeCtx.options.signal;
 			if (effectiveSignal?.aborted === true) {
 				const reason = effectiveSignal.reason as unknown;
 				throw reason instanceof Error ? reason : new NetworkError("Request aborted");
@@ -182,7 +194,7 @@ export class GitHubClient {
 			const cacheKey = $(this.deps.gitHubCacheService.generateKey(method, url, token));
 
 			let cachedEntry: { etag: string; body: ArrayBuffer; headers: Record<string, string> } | undefined;
-			if (shouldCache === true) {
+			if (shouldCache) {
 				cachedEntry = $(this.deps.gitHubCacheService.get(cacheKey));
 				if (cachedEntry !== undefined && cachedEntry.etag !== "") {
 					reqHeaders["if-none-match"] = cachedEntry.etag;
@@ -207,13 +219,13 @@ export class GitHubClient {
 				if (timeoutId !== undefined) {
 					window.clearTimeout(timeoutId);
 				}
-				if (abortHandler !== undefined && effectiveSignal !== undefined && effectiveSignal !== null) {
+				if (abortHandler !== undefined && effectiveSignal !== undefined) {
 					effectiveSignal.removeEventListener("abort", abortHandler);
 				}
 			});
 
 			const abortPromise = new Promise<never>((_, reject): void => {
-				if (effectiveSignal !== undefined && effectiveSignal !== null) {
+				if (effectiveSignal !== undefined) {
 					abortHandler = (): void => {
 						const reason = effectiveSignal.reason as unknown;
 						reject(
@@ -245,7 +257,7 @@ export class GitHubClient {
 			const isSuccess = response.status >= 200 && response.status < 300;
 			const isNotModified = response.status === 304;
 
-			if (isSuccess === false && isNotModified === false) {
+			if (!isSuccess && !isNotModified) {
 				let responseDetails = "";
 				const rawText = typeof response.text === "string" ? response.text.trim() : "";
 				if (rawText !== "") {
@@ -253,7 +265,7 @@ export class GitHubClient {
 						return JSON.parse(rawText);
 					});
 
-					if (parseRes.ok === true && typeof parseRes.value === "object" && parseRes.value !== null) {
+					if (parseRes.ok && typeof parseRes.value === "object" && parseRes.value !== null) {
 						const parsedObj = parseRes.value as { readonly message?: unknown };
 						if (typeof parsedObj.message === "string" && parsedObj.message.trim() !== "") {
 							responseDetails = ` (${parsedObj.message.trim()})`;
@@ -268,7 +280,7 @@ export class GitHubClient {
 				throw new NetworkError(`Failed to request ${url}: status code ${String(response.status)}${responseDetails}`);
 			}
 
-			if (response.status === 304 && shouldCache === true) {
+			if (response.status === 304 && shouldCache) {
 				if (cachedEntry !== undefined) {
 					return new Response(cachedEntry.body, {
 						status: 200,
@@ -284,7 +296,7 @@ export class GitHubClient {
 			}
 
 			const responseHeaders = response.headers;
-			if (response.status === 200 && shouldCache === true) {
+			if (response.status === 200 && shouldCache) {
 				const etag = responseHeaders["etag"] ?? responseHeaders["ETag"];
 				if (typeof etag === "string" && etag !== "") {
 					$(
@@ -332,7 +344,7 @@ export class GitHubClient {
 		const used = usedStr !== undefined ? Number(usedStr) : Math.max(0, limit - remaining);
 		const resource = norm["x-ratelimit-resource"] ?? "core";
 
-		if (Number.isNaN(limit) === true || Number.isNaN(remaining) === true || Number.isNaN(reset) === true) {
+		if (Number.isNaN(limit) || Number.isNaN(remaining) || Number.isNaN(reset)) {
 			return;
 		}
 
@@ -341,7 +353,7 @@ export class GitHubClient {
 			const perms = parseHeaderList(norm, "x-accepted-github-permissions");
 			if (perms.length > 0) {
 				scopes = perms;
-			} else if (token.startsWith("github_pat_") === true) {
+			} else if (token.startsWith("github_pat_")) {
 				scopes = ["fine-grained-pat"];
 			}
 		}
@@ -350,7 +362,7 @@ export class GitHubClient {
 			limit,
 			remaining,
 			reset,
-			used: Number.isNaN(used) === true ? Math.max(0, limit - remaining) : used,
+			used: Number.isNaN(used) ? Math.max(0, limit - remaining) : used,
 			resource,
 			scopes,
 			timestamp: Date.now(),
@@ -383,7 +395,7 @@ export class GitHubClient {
 	}
 
 	public dispose(): void {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			return;
 		}
 		this.disposed = true;

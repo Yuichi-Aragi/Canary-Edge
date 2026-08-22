@@ -47,14 +47,14 @@ export class GitHubCacheService {
 	public isCacheable(method: string, url: string): Result<boolean> {
 		return this.safeCtx((): boolean => {
 			const isGet = method.toUpperCase() === "GET";
-			const isRateLimit = url.includes("/rate_limit") === true;
-			const isUser = url.includes("/user") === true;
-			return isGet === true && isRateLimit === false && isUser === false;
+			const isRateLimit = url.includes("/rate_limit");
+			const isUser = url.includes("/user");
+			return isGet && !isRateLimit && !isUser;
 		});
 	}
 
 	public dispose(): void {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			return;
 		}
 		this.disposed = true;

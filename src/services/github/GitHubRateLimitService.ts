@@ -14,7 +14,7 @@ export class GitHubRateLimitService {
 	public constructor(private readonly deps: Readonly<Cradle>) {}
 
 	public dispose(): void {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			return;
 		}
 		this.disposed = true;
@@ -25,14 +25,14 @@ export class GitHubRateLimitService {
 		token: string,
 		secretId?: string,
 	): Promise<Result<RateLimitData>> {
-		return await this.safeCtx.async<RateLimitData>(async (_$) => {
+		return this.safeCtx.async<RateLimitData>(async (_$) => {
 			const tokenKey = token !== "" ? token : "anonymous";
 			const response = await octokitRequest("GET /rate_limit");
 
 			const parsedRes = v.parse(GitHubRateLimitResponseSchema, response);
 
 			const { data, headers } = parsedRes;
-			const normalizedRes = normalizeHeaders(headers as Record<string, unknown>);
+			const normalizedRes = normalizeHeaders(headers);
 
 			const coreData = data.resources?.core ?? data.rate;
 			if (coreData === undefined) {
@@ -44,7 +44,7 @@ export class GitHubRateLimitService {
 				const perms = parseHeaderList(normalizedRes, "x-accepted-github-permissions");
 				if (perms.length > 0) {
 					scopes = perms;
-				} else if (token.startsWith("github_pat_") === true) {
+				} else if (token.startsWith("github_pat_")) {
 					scopes = ["fine-grained-pat"];
 				}
 			}

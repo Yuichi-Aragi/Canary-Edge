@@ -28,7 +28,7 @@ export class GitHubRepositoryService {
 		const safeCtx = safe.from(resolveApiContext(ctx)).bind(this);
 		const effectiveToken = resolveToken(token, ctx);
 
-		return await safeCtx.async<RepoAccessContext>(async ($) => {
+		return safeCtx.async<RepoAccessContext>(async ($) => {
 			const scrubbed = scrubRepositoryUrl(repository);
 			const repoInfo = parseRepositoryPath(scrubbed);
 
@@ -45,20 +45,20 @@ export class GitHubRepositoryService {
 
 			const octokit = $(this.deps.gitHubClient.getOctokit(effectiveToken, safeCtx));
 			const repoGetRes = await safe.tryAsync(async (): Promise<unknown> => {
-				return await octokit.repos.get({ owner, repo });
+				return octokit.repos.get({ owner, repo });
 			});
 
-			if (repoGetRes.ok === false) {
+			if (!repoGetRes.ok) {
 				const err = repoGetRes.error;
 				const errorStatus =
-					typeof err === "object" && err !== null && "status" in err
+					"status" in err && typeof (err as Record<string, unknown>)["status"] === "number"
 						? Number((err as Record<string, unknown>)["status"])
 						: undefined;
 
 				if (errorStatus === 404 || errorStatus === 403) {
 					throw new Error(`Repository ${owner}/${repo} is not accessible. Check your token or repository spelling.`);
 				}
-				throw err instanceof Error ? err : new Error(String(err));
+				throw err;
 			}
 
 			const accessContext: RepoAccessContext = { isAccessible: true };
@@ -69,7 +69,7 @@ export class GitHubRepositoryService {
 	}
 
 	public dispose(): void {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			return;
 		}
 		this.disposed = true;

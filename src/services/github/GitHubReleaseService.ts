@@ -29,16 +29,16 @@ export const filterReleasesByChannel = (
 	channel: ReleaseChannel,
 ): Release[] => {
 	return releases.filter((release: Readonly<Release>): boolean => {
-		if (release.draft === true) {
+		if (release.draft) {
 			return false;
 		}
 
 		return match(channel)
 			.with("stable", (): boolean => {
-				return release.prerelease === false;
+				return !release.prerelease;
 			})
 			.with("beta", (): boolean => {
-				return release.prerelease === false ? true : isBetaPrerelease(release);
+				return !release.prerelease ? true : isBetaPrerelease(release);
 			})
 			.with("canary", (): boolean => {
 				return true;
@@ -51,10 +51,35 @@ const resolveReleaseChannel = (
 	channelOrIncludePrereleases: ReleaseChannel | boolean,
 ): ReleaseChannel => {
 	if (typeof channelOrIncludePrereleases === "boolean") {
-		return channelOrIncludePrereleases === true ? "canary" : "stable";
+		return channelOrIncludePrereleases ? "canary" : "stable";
 	}
 	return channelOrIncludePrereleases;
 };
+
+interface FetchReleasesApiParams {
+	readonly owner: string;
+	readonly repo: string;
+	readonly accessToken: string;
+	readonly safeCtx: ReturnType<typeof safe.from>;
+	readonly $: <T>(val: Result<T> | T) => T;
+	readonly perPage: number;
+	readonly page: number;
+}
+
+export interface FetchReleaseVersionsOptions {
+	readonly token?: string | undefined;
+	readonly channel?: ReleaseChannel | undefined;
+	readonly ctx?: OperationContext | Api | AbortSignal | undefined;
+	readonly perPage?: number | undefined;
+	readonly page?: number | undefined;
+}
+
+export interface GrabReleaseOptions {
+	readonly version?: string | undefined;
+	readonly channelOrIncludePrereleases?: ReleaseChannel | boolean | undefined;
+	readonly token?: string | undefined;
+	readonly ctx?: OperationContext | Api | AbortSignal | undefined;
+}
 
 export class GitHubReleaseService {
 	private readonly safeCtx = safe.bind(this);
@@ -63,21 +88,14 @@ export class GitHubReleaseService {
 	public constructor(private readonly deps: Readonly<Cradle>) {}
 
 	public dispose(): void {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			return;
 		}
 		this.disposed = true;
 	}
 
-	private async fetchReleasesApi(
-		owner: string,
-		repo: string,
-		accessToken: string,
-		safeCtx: ReturnType<typeof safe.from>,
-		$: <T>(val: Result<T> | T) => T,
-		perPage: number,
-		page: number,
-	): Promise<Release[]> {
+	private async fetchReleasesApi(params: Readonly<FetchReleasesApiParams>): Promise<Release[]> {
+		const { owner, repo, accessToken, safeCtx, $, perPage, page } = params;
 		const safePerPage = Math.max(1, Math.min(perPage, 100));
 		const safePage = Math.max(1, page);
 
@@ -89,7 +107,7 @@ export class GitHubReleaseService {
 			page: safePage,
 		});
 
-		if (Array.isArray(response.data) === false) {
+		if (!Array.isArray(response.data)) {
 			return [];
 		}
 
@@ -97,36 +115,38 @@ export class GitHubReleaseService {
 	}
 
 	public async fetchReleaseVersions(
-		repository: string, 
-		token = "", 
-		channel?: ReleaseChannel,
-		ctx?: OperationContext | Api | AbortSignal,
-		perPage = 100,
-		page = 1,
+		repository: string,
+		options?: Readonly<FetchReleaseVersionsOptions>,
 	): Promise<Result<ReleaseVersion[] | null>> {
+		const token = options?.token ?? "";
+		const channel = options?.channel;
+		const ctx = options?.ctx;
+		const perPage = options?.perPage ?? 100;
+		const page = options?.page ?? 1;
+
 		const safeCtx = safe.from(resolveApiContext(ctx)).bind(this);
 		const effectiveToken = resolveToken(token, ctx);
 
-		return await safeCtx.async<ReleaseVersion[] | null>(async ($) => {
+		return safeCtx.async<ReleaseVersion[] | null>(async ($) => {
 			const repoInfo = parseRepositoryPath(repository);
 			if (repoInfo === null) {
 				return null;
 			}
 
-			const parsedReleases = await this.fetchReleasesApi(
-				repoInfo.owner,
-				repoInfo.repo,
-				effectiveToken,
+			const parsedReleases = await this.fetchReleasesApi({
+				owner: repoInfo.owner,
+				repo: repoInfo.repo,
+				accessToken: effectiveToken,
 				safeCtx,
 				$,
 				perPage,
 				page,
-			);
+			});
 
 			const candidates = channel !== undefined 
 				? filterReleasesByChannel(parsedReleases, channel)
 				: parsedReleases.filter((r: Readonly<Release>): boolean => {
-					return r.draft === false;
+					return !r.draft;
 				});
 
 			return candidates.map((r: Readonly<Release>): ReleaseVersion => {
@@ -147,39 +167,41 @@ export class GitHubReleaseService {
 		const safeCtx = safe.from(resolveApiContext(ctx)).bind(this);
 		const effectiveToken = resolveToken(token, ctx);
 
-		return await safeCtx.async<Release[]>(async ($) => {
+		return safeCtx.async<Release[]>(async ($) => {
 			const repoInfo = parseRepositoryPath(repositoryPath);
 			if (repoInfo === null) {
 				return [];
 			}
 
-			const parsedReleases = await this.fetchReleasesApi(
-				repoInfo.owner,
-				repoInfo.repo,
-				effectiveToken,
+			const parsedReleases = await this.fetchReleasesApi({
+				owner: repoInfo.owner,
+				repo: repoInfo.repo,
+				accessToken: effectiveToken,
 				safeCtx,
 				$,
-				30,
-				1,
-			);
+				perPage: 30,
+				page: 1,
+			});
 
 			return parsedReleases.filter((r: Readonly<Release>): boolean => {
-				return r.draft === false;
+				return !r.draft;
 			});
 		});
 	}
 
 	public async grabReleaseFromRepository(
 		repositoryPath: string,
-		version?: string,
-		channelOrIncludePrereleases: ReleaseChannel | boolean = "stable",
-		token = "",
-		ctx?: OperationContext | Api | AbortSignal,
+		options?: Readonly<GrabReleaseOptions>,
 	): Promise<Result<Release | null>> {
+		const version = options?.version;
+		const channelOrIncludePrereleases = options?.channelOrIncludePrereleases ?? "stable";
+		const token = options?.token ?? "";
+		const ctx = options?.ctx;
+
 		const safeCtx = safe.from(resolveApiContext(ctx)).bind(this);
 		const effectiveToken = resolveToken(token, ctx);
 
-		return await safeCtx.async<Release | null>(async ($) => {
+		return safeCtx.async<Release | null>(async ($) => {
 			const repoInfo = parseRepositoryPath(repositoryPath);
 			if (repoInfo === null) {
 				return null;
@@ -194,7 +216,7 @@ export class GitHubReleaseService {
 				});
 
 				const parsedRelease = parse(ReleaseSchema, resVal.data);
-				if (parsedRelease.draft === true) {
+				if (parsedRelease.draft) {
 					return null;
 				}
 

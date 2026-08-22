@@ -15,7 +15,7 @@ export class GitHubTokenService {
 	public constructor(private readonly deps: Readonly<Cradle>) {}
 
 	public dispose(): void {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			return;
 		}
 		this.disposed = true;
@@ -27,7 +27,7 @@ export class GitHubTokenService {
 		ctx?: OperationContext | Api | AbortSignal,
 	): Promise<Result<RateLimitData>> {
 		const safeCtx = safe.from(resolveApiContext(ctx)).bind(this);
-		return await safeCtx.async<RateLimitData>(async ($) => {
+		return safeCtx.async<RateLimitData>(async ($) => {
 			const octokit = $(this.deps.gitHubClient.getOctokit(token, safeCtx, secretId));
 			return $(await this.deps.gitHubRateLimitService.fetchRateLimit(octokit.request.bind(octokit), token, secretId));
 		});
@@ -35,15 +35,15 @@ export class GitHubTokenService {
 
 	public async validateToken(token: string, ctx?: OperationContext | Api | AbortSignal): Promise<Result<GitHubTokenInfo>> {
 		const safeCtx = safe.from(resolveApiContext(ctx)).bind(this);
-		return await safeCtx.async<GitHubTokenInfo>(async ($) => {
+		return safeCtx.async<GitHubTokenInfo>(async ($) => {
 			const tokenLowerPrefix = token.substring(0, 12).toLowerCase();
 			const hasPrefix = TOKEN_CONSTANTS.PREFIXES.some((p): boolean => {
-				return tokenLowerPrefix.startsWith(p.toLowerCase()) === true;
+				return tokenLowerPrefix.startsWith(p.toLowerCase());
 			});
 			const hasFormat = TOKEN_CONSTANTS.REGEXP.test(token);
 
-			if (hasPrefix === false || hasFormat === false) {
-				const type = hasPrefix === false ? TokenErrorType.INVALID_PREFIX : TokenErrorType.INVALID_FORMAT;
+			if (!hasPrefix || !hasFormat) {
+				const type = !hasPrefix ? TokenErrorType.INVALID_PREFIX : TokenErrorType.INVALID_FORMAT;
 				return this.createTokenInfo({
 					validToken: false,
 					error: {
@@ -64,27 +64,27 @@ export class GitHubTokenService {
 
 			const validDate = expiry !== "" ? new Date(expiry).toISOString() : null;
 			const isExpired = validDate !== null && new Date(validDate) < new Date();
-			const isFineGrained = token.startsWith("github_pat_") === true;
+			const isFineGrained = token.startsWith("github_pat_");
 
 			let hasScope = true;
-			if (isFineGrained === false) {
+			if (!isFineGrained) {
 				if (scopes.length > 0 || perms.length > 0) {
 					const hasValidScope = scopes.some((s): boolean => {
-						return VALID_SCOPES.includes(s) === true;
+						return VALID_SCOPES.includes(s);
 					});
 					const hasValidPerm = perms.some((p): boolean => {
-						return VALID_SCOPES.includes(p) === true || p.startsWith("metadata") === true || p.startsWith("contents") === true;
+						return VALID_SCOPES.includes(p) || p.startsWith("metadata") || p.startsWith("contents");
 					});
-					hasScope = hasValidScope === true || hasValidPerm === true;
+					hasScope = hasValidScope || hasValidPerm;
 				}
 			}
 
 			let resolvedScopes: readonly string[] = scopes;
-			if (resolvedScopes.length === 0 && isFineGrained === true) {
+			if (resolvedScopes.length === 0 && isFineGrained) {
 				resolvedScopes = ["fine-grained-pat"];
 			}
 
-			if (isExpired === true) {
+			if (isExpired) {
 				return this.createTokenInfo({
 					validToken: false,
 					headers,
@@ -94,12 +94,12 @@ export class GitHubTokenService {
 					error: {
 						type: TokenErrorType.EXPIRED,
 						message: "Expired",
-						details: { expirationDate: validDate ?? undefined },
+						details: { expirationDate: validDate },
 					},
 				});
 			}
 
-			if (hasScope === false) {
+			if (!hasScope) {
 				return this.createTokenInfo({
 					validToken: false,
 					headers,
@@ -157,11 +157,11 @@ export class GitHubTokenService {
 		const resource = rawResource !== "" ? rawResource : "core";
 
 		return {
-			limit: Number.isNaN(limit) === false ? limit : 0,
-			remaining: Number.isNaN(remaining) === false ? remaining : 0,
-			reset: Number.isNaN(reset) === false ? reset : 0,
+			limit: !Number.isNaN(limit) ? limit : 0,
+			remaining: !Number.isNaN(remaining) ? remaining : 0,
+			reset: !Number.isNaN(reset) ? reset : 0,
 			resource,
-			used: Number.isNaN(used) === false ? used : 0,
+			used: !Number.isNaN(used) ? used : 0,
 			scopes: parseHeaderList(headers, "x-oauth-scopes"),
 			timestamp: Date.now(),
 		};

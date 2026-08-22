@@ -14,7 +14,7 @@ export class GitHubAssetService {
 	public constructor(private readonly deps: Readonly<Cradle>) {}
 
 	public dispose(): void {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			return;
 		}
 		this.disposed = true;
@@ -29,7 +29,7 @@ export class GitHubAssetService {
 		const safeCtx = safe.from(resolveApiContext(ctx)).bind(this);
 		const effectiveToken = resolveToken(token, ctx);
 
-		return await safeCtx.async<ArrayBuffer | null>(async ($) => {
+		return safeCtx.async<ArrayBuffer | null>(async ($) => {
 			$.checkpoint();
 			const asset = release.assets.find((a: Release["assets"][number]): boolean => {
 				return a.name === fileName;
@@ -56,7 +56,7 @@ export class GitHubAssetService {
 		parentCtx?: Api | AbortSignal,
 	): Promise<Result<ArrayBuffer | null>> {
 		const safeCtx = safe.from(parentCtx).bind(this);
-		return await safeCtx.async<ArrayBuffer | null>(async ($) => {
+		return safeCtx.async<ArrayBuffer | null>(async ($) => {
 			$.checkpoint();
 			const octokit = $(this.deps.gitHubClient.getOctokit(token, safeCtx));
 			const matchResult = /repos\/([^/]+)\/([^/]+)\/releases\/assets\/(\d+)/.exec(url);
@@ -69,7 +69,7 @@ export class GitHubAssetService {
 			const repo = matchResult[2] ?? "";
 			const assetId = Number(matchResult[3] ?? "0");
 
-			if (owner === "" || repo === "" || Number.isNaN(assetId) === true || assetId === 0) {
+			if (owner === "" || repo === "" || Number.isNaN(assetId) || assetId === 0) {
 				return null;
 			}
 
@@ -90,7 +90,7 @@ export class GitHubAssetService {
 		parentCtx?: Api | AbortSignal,
 	): Promise<Result<ArrayBuffer | null>> {
 		const safeCtx = safe.from(parentCtx).bind(this);
-		return await safeCtx.async<ArrayBuffer | null>(async ($, defer) => {
+		return safeCtx.async<ArrayBuffer | null>(async ($, defer) => {
 			const { signal } = safeCtx.options;
 			if (signal?.aborted === true) {
 				const reason = signal.reason as unknown;
@@ -101,13 +101,13 @@ export class GitHubAssetService {
 
 			let abortHandler: (() => void) | undefined;
 			defer((): void => {
-				if (signal !== undefined && signal !== null && abortHandler !== undefined) {
+				if (signal !== undefined && abortHandler !== undefined) {
 					signal.removeEventListener("abort", abortHandler);
 				}
 			});
 
 			const abortPromise = new Promise<never>((_, reject): void => {
-				if (signal !== undefined && signal !== null) {
+				if (signal !== undefined) {
 					abortHandler = (): void => {
 						const reason = signal.reason as unknown;
 						reject(reason instanceof Error ? reason : new Error("Request aborted"));
@@ -118,7 +118,7 @@ export class GitHubAssetService {
 
 			const fetchPromise = requestUrl({ url, headers: { Accept: "application/octet-stream" }, throw: false });
 			const response =
-				signal !== undefined && signal !== null
+				signal !== undefined
 					? await Promise.race([fetchPromise, abortPromise])
 					: await fetchPromise;
 
