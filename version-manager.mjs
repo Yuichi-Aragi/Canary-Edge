@@ -1,18 +1,20 @@
+import { execSync } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 import { 
   readFileSync, 
   writeFileSync, 
   copyFileSync, 
-  existsSync, 
   unlinkSync, 
-  mkdirSync,
+  mkdtempSync,
+  rmSync,
   renameSync,
   statSync,
   appendFileSync
 } from 'node:fs';
-import { execSync } from 'node:child_process';
-import { tmpdir } from 'node:os';
-import { join, basename } from 'node:path';
+import { join, basename, dirname, resolve } from 'node:path';
+import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+
 import semver from 'semver';
 
 const CONFIG = {
@@ -34,11 +36,13 @@ const CONFIG = {
  */
 function setGithubOutput(key, value) {
   const outputFile = process.env.GITHUB_OUTPUT;
-  if (!outputFile) return;
+  if (!outputFile) {
+    return;
+  }
 
   const strValue = String(value);
   if (strValue.includes('\n')) {
-    const delimiter = `DELIMITER_${Math.random().toString(36).substring(2, 10)}`;
+    const delimiter = `DELIMITER_${randomBytes(8).toString('hex')}`;
     appendFileSync(
       outputFile,
       `${key}<<${delimiter}\n${strValue}\n${delimiter}\n`,
@@ -62,7 +66,10 @@ function run(command, options = {}) {
       ...options
     });
   } catch (error) {
-    const msg = `Command failed (exit ${error.status || 'unknown'}): ${command}`;
+    const status = (error && typeof error === 'object' && 'status' in error && error.status) 
+      ? String(error.status) 
+      : 'unknown';
+    const msg = `Command failed (exit ${status}): ${command}`;
     throw new Error(msg, { cause: error });
   }
 }
@@ -81,24 +88,42 @@ function readJsonFile(filePath) {
     const content = readFileSync(filePath, 'utf-8');
     return JSON.parse(content);
   } catch (error) {
-    throw new Error(`Failed to parse JSON "${filePath}": ${error.message}`, { cause: error });
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to parse JSON "${filePath}": ${errorMessage}`, { cause: error });
   }
 }
 
+/**
+ * Securely writes JSON content atomically.
+ *
+ * Creates a dedicated, permission-restricted directory (0700) located within
+ * the target file's directory (ensuring same-filesystem atomic rename without EXDEV failures),
+ * writes with exclusive creation flags and restrictive permissions (0600), and removes
+ * temporary directory scaffolding upon completion.
+ */
 function writeJsonFile(filePath, data) {
-  const tempDir = join(tmpdir(), 'version-manager');
-  mkdirSync(tempDir, { recursive: true });
-  const tempPath = join(tempDir, `${Date.now()}-${Math.random()}-${basename(filePath)}.tmp`);
+  const resolvedPath = resolve(filePath);
+  const targetDir = dirname(resolvedPath);
+  const tempDir = mkdtempSync(join(targetDir, '.tmp-vm-'));
+  const tempPath = join(tempDir, `${basename(resolvedPath)}.tmp`);
   
   try {
-    writeFileSync(tempPath, JSON.stringify(data, null, 2) + '\n', 'utf-8');
-    renameSync(tempPath, filePath);
+    writeFileSync(tempPath, `${JSON.stringify(data, null, 2)}\n`, {
+      encoding: 'utf-8',
+      mode: 0o600,
+      flag: 'wx'
+    });
+    renameSync(tempPath, resolvedPath);
     console.log(`✅ Updated ${filePath}`);
   } catch (error) {
-    if (existsSync(tempPath)) {
-      unlinkSync(tempPath);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to write "${filePath}": ${errorMessage}`, { cause: error });
+  } finally {
+    try {
+      rmSync(tempDir, { recursive: true, force: true });
+    } catch {
+      // Ignore temporary directory cleanup failure to avoid masking operation errors
     }
-    throw new Error(`Failed to write "${filePath}": ${error.message}`, { cause: error });
   }
 }
 
@@ -111,9 +136,19 @@ function isBetaVersion(version) {
 
 function getLatestVersionEntry(versions) {
   const keys = Object.keys(versions);
-  if (keys.length === 0) return null;
+  if (keys.length === 0) {
+    return null;
+  }
   
-  const latest = keys.reduce((max, v) => semver.gt(v, max) ? v : max, keys[0]);
+  const firstKey = keys[0];
+  if (!firstKey) {
+    return null;
+  }
+  
+  const latest = keys.reduce((max, v) => {
+    return semver.gt(v, max) ? v : max;
+  }, firstKey);
+
   return { version: latest, minAppVersion: versions[latest] };
 }
 
@@ -138,44 +173,56 @@ function shouldTriggerRelease(latest, newVersion, newMinApp) {
 }
 
 async function retry(fn, attempts = 3, delayMs = 1500) {
-  let lastError;
+  let lastError = null;
   for (let i = 0; i < attempts; i++) {
     try {
       return await fn();
     } catch (error) {
       lastError = error;
       if (i < attempts - 1) {
-        console.warn(`⚠️  Attempt ${i + 1}/${attempts} failed: ${error.message}`);
-        await new Promise(r => setTimeout(r, delayMs));
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.warn(`⚠️  Attempt ${String(i + 1)}/${String(attempts)} failed: ${errorMessage}`);
+        await new Promise((resolve) => {
+          setTimeout(resolve, delayMs);
+        });
       }
     }
   }
-  throw lastError;
+  if (lastError instanceof Error) {
+    throw lastError;
+  }
+  throw new Error(`Operation failed after ${String(attempts)} attempts: ${String(lastError)}`);
 }
 
 function validateBuildOutput(expectedPath = CONFIG.BUILD_OUTPUT) {
   console.log(`🔍 Validating build output: ${expectedPath}`);
   
-  if (!existsSync(expectedPath)) {
-    throw new Error(`Build artifact not found: ${expectedPath}`);
+  let stats;
+  try {
+    stats = statSync(expectedPath);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Build artifact not found: ${expectedPath} (${errorMessage})`, { cause: error });
   }
   
-  const stats = statSync(expectedPath);
   if (stats.size === 0) {
     throw new Error(`Build artifact is empty: ${expectedPath}`);
   }
   
-  console.log(`✅ Build valid (${stats.size} bytes)`);
+  console.log(`✅ Build valid (${String(stats.size)} bytes)`);
 }
 
 function prepareReleaseAsset(sourcePath, destPath) {
-  if (!existsSync(sourcePath)) {
-    throw new Error(`Asset source not found: ${sourcePath}`);
+  if (sourcePath === destPath) {
+    return;
   }
-  
-  if (sourcePath !== destPath) {
+
+  try {
     copyFileSync(sourcePath, destPath);
     console.log(`📋 Prepared asset: ${destPath}`);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to prepare asset "${sourcePath}" -> "${destPath}": ${errorMessage}`, { cause: error });
   }
 }
 
@@ -192,8 +239,12 @@ async function main() {
   ];
   
   for (const file of filesToBackup) {
-    if (existsSync(file)) {
+    try {
       backups.set(file, readFileSync(file, 'utf-8'));
+    } catch (error) {
+      if (!error || typeof error !== 'object' || !('code' in error) || error.code !== 'ENOENT') {
+        throw error;
+      }
     }
   }
   
@@ -218,23 +269,37 @@ async function main() {
   setGithubOutput('version', manifestVersion);
   setGithubOutput('version_file', versionFile);
 
-  const versions = existsSync(versionFile) ? readJsonFile(versionFile) : {};
+  let versions = {};
+  try {
+    versions = readJsonFile(versionFile);
+  } catch (error) {
+    if (!error || typeof error !== 'object' || !('cause' in error) || !error.cause || typeof error.cause !== 'object' || !('code' in error.cause) || error.cause.code !== 'ENOENT') {
+      throw error;
+    }
+  }
+
   const packageJson = readJsonFile('package.json');
   
   if (versions[manifestVersion]) {
     throw new Error(`Version ${manifestVersion} already exists in ${versionFile}`);
   }
   
-  if (isBeta && existsSync(CONFIG.VERSION_FILES.STABLE)) {
-    const stableVersions = readJsonFile(CONFIG.VERSION_FILES.STABLE);
-    if (stableVersions[manifestVersion]) {
-      throw new Error(`Beta version ${manifestVersion} conflicts with stable release`);
+  if (isBeta) {
+    try {
+      const stableVersions = readJsonFile(CONFIG.VERSION_FILES.STABLE);
+      if (stableVersions[manifestVersion]) {
+        throw new Error(`Beta version ${manifestVersion} conflicts with stable release`);
+      }
+    } catch (stableError) {
+      if (!stableError || typeof stableError !== 'object' || !('cause' in stableError) || !stableError.cause || typeof stableError.cause !== 'object' || !('code' in stableError.cause) || stableError.cause.code !== 'ENOENT') {
+        throw stableError;
+      }
     }
   }
   
   const latest = getLatestVersionEntry(versions);
   if (!shouldTriggerRelease(latest, manifestVersion, minAppVersion)) {
-    console.log(`ℹ️ No release needed. Latest: v${latest?.version}`);
+    console.log(`ℹ️ No release needed. Latest: v${latest ? latest.version : 'none'}`);
     setGithubOutput('released', 'false');
     setGithubOutput('artifacts', '');
     process.exit(0);
@@ -258,7 +323,7 @@ async function main() {
     releaseAssets.push(mainJsPath);
     
     const stylesPath = CONFIG.ASSETS.STYLES;
-    if (existsSync(stylesPath)) {
+    try {
       const content = readFileSync(stylesPath, 'utf-8').trim();
       if (content.length > 0) {
         releaseAssets.push(stylesPath);
@@ -266,12 +331,18 @@ async function main() {
       } else {
         console.log(`⚠️ Skipping empty ${stylesPath}`);
       }
+    } catch (stylesError) {
+      if (!stylesError || typeof stylesError !== 'object' || !('code' in stylesError) || stylesError.code !== 'ENOENT') {
+        throw stylesError;
+      }
     }
     
     console.log(`🔎 Checking for existing release ${manifestVersion}...`);
     if (runSilently(`gh release view ${manifestVersion}`)) {
       console.log(`♻️ Removing existing release ${manifestVersion}...`);
-      await retry(() => run(`gh release delete ${manifestVersion} --yes --cleanup-tag`));
+      await retry(async () => {
+        run(`gh release delete ${manifestVersion} --yes --cleanup-tag`);
+      });
     }
     
     const assets = releaseAssets.join(' ');
@@ -280,9 +351,9 @@ async function main() {
     const notes = `Automated release for ${pluginId} v${manifestVersion}`;
     
     console.log(`📦 Creating ${isBeta ? 'pre-release' : 'release'} ${manifestVersion}...`);
-    await retry(() =>
-      run(`gh release create ${manifestVersion} ${assets} --title "${title}" --notes "${notes}" ${prereleaseFlag}`)
-    );
+    await retry(async () => {
+      run(`gh release create ${manifestVersion} ${assets} --title "${title}" --notes "${notes}" ${prereleaseFlag}`);
+    });
     
     if (versions[manifestVersion] !== minAppVersion) {
       versions[manifestVersion] = minAppVersion;
@@ -297,7 +368,8 @@ async function main() {
     console.log(`\n🎉 Success! Release completed in ${duration}s`);
     
   } catch (error) {
-    console.error(`\n❌ Fatal Error: ${error.message}`);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error(`\n❌ Fatal Error: ${errorMessage}`);
     setGithubOutput('released', 'false');
     
     console.log('\n🔄 Rolling back changes...');
@@ -306,8 +378,10 @@ async function main() {
       console.log(`↩️ Restored ${file}`);
     }
     
-    if (existsSync('main.js')) {
+    try {
       unlinkSync('main.js');
+    } catch {
+      // Ignore if main.js was already absent
     }
     
     if (runSilently(`gh release view ${manifestVersion}`)) {
@@ -320,8 +394,8 @@ async function main() {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
-  main().catch(err => {
+if (process.argv[1] && import.meta.url === `file://${resolve(process.argv[1])}`) {
+  main().catch((err) => {
     console.error('\n💥 Unhandled error:', err);
     process.exit(1);
   });
