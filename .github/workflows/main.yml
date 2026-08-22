@@ -87,18 +87,7 @@ jobs:
 
       - name: Run version manager
         id: version-manager
-        run: |
-          node ./version-manager.mjs
-          
-          MANIFEST_VERSION=$(jq -r '.version' manifest.json)
-          IS_BETA="false"
-          if [[ "$MANIFEST_VERSION" =~ -beta\.[0-9]+$ ]]; then
-            IS_BETA="true"
-          fi
-          
-          echo "is_beta=$IS_BETA" >> "$GITHUB_OUTPUT"
-          echo "version=$MANIFEST_VERSION" >> "$GITHUB_OUTPUT"
-          echo "version_file=$([ "$IS_BETA" = "true" ] && echo "version-beta.json" || echo "versions.json")" >> "$GITHUB_OUTPUT"
+        run: node ./version-manager.mjs
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REF_NAME: ${{ github.ref_name }}
@@ -120,7 +109,7 @@ jobs:
           
           # Stage version files
           VERSION_FILE="${{ steps.version-manager.outputs.version_file }}"
-          if [ -f "$VERSION_FILE" ]; then
+          if [ -n "$VERSION_FILE" ] && [ -f "$VERSION_FILE" ]; then
             git add "$VERSION_FILE"
           fi
           
