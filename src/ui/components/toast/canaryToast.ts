@@ -20,7 +20,7 @@ function resolveToastDuration(
 	variant: ToastVariant,
 	customDuration?: number,
 ): number {
-	if (customDuration !== undefined && Number.isFinite(customDuration) === true && customDuration > 0) {
+	if (customDuration !== undefined && Number.isFinite(customDuration) && customDuration > 0) {
 		return customDuration;
 	}
 	if (variant === "error") {
