@@ -21,10 +21,10 @@ const CONFIG = {
     BETA: 'version-beta.json'
   },
   REQUIRED_FILES: ['manifest.json', 'package.json'],
-  BUILD_OUTPUT: 'assets/main.js',
+  BUILD_OUTPUT: 'main.js',
   ASSETS: {
     MANIFEST: 'manifest.json',
-    STYLES: 'assets/styles.css'
+    STYLES: 'styles.css'
   }
 };
 
@@ -228,7 +228,7 @@ async function main() {
     
     const releaseAssets = [CONFIG.ASSETS.MANIFEST];
     
-    const mainJsPath = 'assets/main.js';
+    const mainJsPath = 'main.js';
     prepareReleaseAsset(CONFIG.BUILD_OUTPUT, mainJsPath);
     releaseAssets.push(mainJsPath);
     
@@ -280,8 +280,8 @@ async function main() {
       console.log(`↩️ Restored ${file}`);
     }
     
-    if (existsSync('assets/main.js')) {
-      unlinkSync('assets/main.js');
+    if (existsSync('main.js')) {
+      unlinkSync('main.js');
     }
     
     if (runSilently(`gh release view ${manifestVersion}`)) {
