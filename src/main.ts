@@ -77,9 +77,7 @@ export default class CanaryEdgePlugin extends ObsidianPlugin {
 		this._core = null;
 	}
 
-	public log(text: string): void {
-		console.info(`[${this._appName}] ${text}`);
-	}
+	public log(_text: string): void {}
 
 	public async loadSettings(): Promise<void> {
 		if (this._bootstrapper.state !== BootState.READY) {
@@ -96,7 +94,7 @@ export default class CanaryEdgePlugin extends ObsidianPlugin {
 
 		const bootstrapRes = await this._bootstrapper.bootstrap();
 
-		if (bootstrapRes.ok === false) {
+		if (!bootstrapRes.ok) {
 			this._logErr(bootstrapRes.error, "Bootstrap failed");
 			return;
 		}
@@ -110,7 +108,7 @@ export default class CanaryEdgePlugin extends ObsidianPlugin {
 		const startRes = await safe.tryAsync((): Promise<void> => {
 			return this._startRuntime(this._bootstrapper.generation);
 		});
-		if (startRes.ok === false) {
+		if (!startRes.ok) {
 			this._logErr(startRes.error, "Runtime start failed");
 		}
 	}
@@ -179,10 +177,10 @@ export default class CanaryEdgePlugin extends ObsidianPlugin {
 
 				this.settings = storeSettings;
 
-				if (prevEnableBratSync === false && newEnableBratSync === true) {
+				if (!prevEnableBratSync && newEnableBratSync) {
 					void (async (): Promise<void> => {
 						const res = await this.bratIntegrationService.syncBratPlugins();
-						if (res.ok === false) {
+						if (!res.ok) {
 							this._logErr(res.error, "BRAT synchronization failed");
 						}
 					})();
@@ -196,30 +194,30 @@ export default class CanaryEdgePlugin extends ObsidianPlugin {
 	}
 
 	private async _startRuntime(g: number): Promise<void> {
-		if (this._bootstrapper.isStale(g) === true) {
+		if (this._bootstrapper.isStale(g)) {
 			return;
 		}
 
 		const res = await this.settingsService.init();
 		this.settings = safe.unwrap(res);
 
-		if (this._bootstrapper.isStale(g) === true) {
+		if (this._bootstrapper.isStale(g)) {
 			return;
 		}
 
 		this.commands.register();
 		this._setupRibbon();
 
-		if (this._bootstrapper.isStale(g) === true) {
+		if (this._bootstrapper.isStale(g)) {
 			return;
 		}
 
 		const bratRes = await this.bratIntegrationService.syncBratPlugins();
-		if (bratRes.ok === false) {
+		if (!bratRes.ok) {
 			this._logErr(bratRes.error, "BRAT synchronization failed");
 		}
 
-		if (this._bootstrapper.isStale(g) === true) {
+		if (this._bootstrapper.isStale(g)) {
 			return;
 		}
 		this._scheduleUpdates(g);
@@ -231,7 +229,7 @@ export default class CanaryEdgePlugin extends ObsidianPlugin {
 				const res = safe.try((): void => {
 					this.ceWindowManager.toggle(this);
 				});
-				if (res.ok === false) {
+				if (!res.ok) {
 					this._logErr(res.error, "Ribbon action failed");
 				}
 			}
@@ -240,18 +238,18 @@ export default class CanaryEdgePlugin extends ObsidianPlugin {
 
 	private _scheduleUpdates(g: number): void {
 		const runCheck = (initial: boolean): void => {
-			if (this._bootstrapper.isStale(g) === true) {
+			if (this._bootstrapper.isStale(g)) {
 				return;
 			}
 
 			void (async (): Promise<void> => {
 				const bratRes = await this.bratIntegrationService.syncBratPlugins();
-				if (bratRes.ok === false) {
+				if (!bratRes.ok) {
 					this._logErr(bratRes.error, "BRAT synchronization failed");
 				}
 
 				const res = await this.updateOrchestrator.checkForPluginUpdatesAndInstallUpdates(false, false, initial);
-				if (res.ok === false) {
+				if (!res.ok) {
 					this._logErr(res.error, "Update check failed");
 				}
 			})();
@@ -279,9 +277,6 @@ export default class CanaryEdgePlugin extends ObsidianPlugin {
 
 		const c = this._core.container;
 
-		void safe.try((): void => {
-			console.info(`unloading ${this._appName}`);
-		});
 		void safe.try((): void => {
 			c.resolve("ceWindowManager").close();
 		});
