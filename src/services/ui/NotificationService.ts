@@ -19,7 +19,7 @@ export class NotificationService {
 	public constructor(private readonly deps: Readonly<Cradle>) {}
 
 	public dispose(): void {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			return;
 		}
 		this.disposed = true;
@@ -51,7 +51,7 @@ export class NotificationService {
 					return getFriendlyErrorMessage(content, options?.context);
 				});
 
-			if (isCEWindowOpen === true) {
+			if (isCEWindowOpen) {
 				const toastFn = match(level)
 					.with("error", (): typeof canaryToast.error => {
 						return canaryToast.error;
@@ -102,7 +102,7 @@ export class NotificationService {
 			let additionalInfo = "";
 			if (options?.contextMenuCallback !== undefined) {
 				additionalInfo =
-					Platform.isDesktop === true ? "(click=dismiss, right-click=Info)" : "(click=dismiss)";
+					Platform.isDesktop ? "(click=dismiss, right-click=Info)" : "(click=dismiss)";
 			}
 
 			const fullMessage = `${APP_NAME}\n${userFriendlyMessage}${additionalInfo !== "" ? `\n${additionalInfo}` : ""}`;
@@ -110,7 +110,7 @@ export class NotificationService {
 
 			if (options?.contextMenuCallback !== undefined) {
 				const internalNotice = notice as unknown as { readonly messageEl?: HTMLElement };
-				if (internalNotice.messageEl !== undefined && internalNotice.messageEl !== null) {
+				if (internalNotice.messageEl !== undefined) {
 					internalNotice.messageEl.oncontextmenu = (e: MouseEvent): void => {
 						e.preventDefault();
 						options.contextMenuCallback?.();
