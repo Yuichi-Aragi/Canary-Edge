@@ -441,10 +441,8 @@ export const scrubRepositoryUrl = (url: string): string => {
 	if (schemeMatch > 0) {
 		const scheme: string = clean.slice(0, schemeMatch).toLowerCase();
 		if (
-			scheme === "javascript" ||
 			scheme === "data" ||
 			scheme === "file" ||
-			scheme === "vbscript" ||
 			scheme === "blob" ||
 			scheme === "about" ||
 			scheme === "obsidian"
