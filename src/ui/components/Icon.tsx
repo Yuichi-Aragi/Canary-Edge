@@ -1,40 +1,43 @@
-import { setIcon } from "obsidian";
-import { useEffect, useRef, useCallback, type JSX, type MouseEvent as ReactMouseEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { clsx } from "clsx";
+import { setIcon } from "obsidian";
+import { useCallback, useEffect, useRef } from "react";
+import type { JSX, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from "react";
 
-interface IconProps {
+export interface IconProps {
 	readonly name: string;
 	readonly className?: string | undefined;
-	readonly onClick?: ((e: ReactMouseEvent) => void) | undefined;
+	readonly onClick?: ((e: ReactMouseEvent<HTMLSpanElement>) => void) | undefined;
 	readonly ariaLabel?: string | undefined;
 }
 
-export function Icon({ name: iconName, className, onClick, ariaLabel }: IconProps): JSX.Element {
+export function Icon({ name: iconName, className, onClick, ariaLabel }: Readonly<IconProps>): JSX.Element {
 	const ref = useRef<HTMLSpanElement>(null);
+	const isInteractive = onClick !== undefined;
 
 	useEffect((): void => {
-		if (ref.current !== null) {
-			ref.current.innerHTML = "";
-			setIcon(ref.current, iconName);
+		const node = ref.current;
+		if (node !== null) {
+			node.replaceChildren();
+			setIcon(node, iconName);
 		}
 	}, [iconName]);
 
-	const handleKeyDown = useCallback((e: ReactKeyboardEvent): void => {
+	const handleKeyDown = useCallback((e: ReactKeyboardEvent<HTMLSpanElement>): void => {
 		if (e.key === "Enter" || e.key === " ") {
 			e.preventDefault();
-			onClick?.(e as unknown as ReactMouseEvent);
+			ref.current?.click();
 		}
-	}, [onClick]);
+	}, []);
 
 	return (
 		<span
 			ref={ref}
 			aria-label={ariaLabel}
 			className={clsx(className)}
-			role={onClick !== undefined ? "button" : undefined}
-			tabIndex={onClick !== undefined ? 0 : undefined}
+			role={isInteractive ? "button" : undefined}
+			tabIndex={isInteractive ? 0 : undefined}
 			onClick={onClick}
-			onKeyDown={onClick !== undefined ? handleKeyDown : undefined}
+			onKeyDown={isInteractive ? handleKeyDown : undefined}
 		/>
 	);
 }
