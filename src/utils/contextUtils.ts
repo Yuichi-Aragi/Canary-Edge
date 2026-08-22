@@ -17,7 +17,7 @@ export interface ValidatedRepository {
 export const resolveApiContext = (
 	ctx?: OperationContext | Api | AbortSignal,
 ): Api | AbortSignal | undefined => {
-	if (ctx !== undefined && ctx !== null && "safeCtx" in ctx) {
+	if (ctx !== undefined && "safeCtx" in ctx) {
 		return ctx.safeCtx;
 	}
 	return ctx;
@@ -30,7 +30,7 @@ export const resolveToken = (
 	if (typeof token === "string" && token !== "") {
 		return token;
 	}
-	if (ctx !== undefined && ctx !== null && "token" in ctx && typeof ctx.token === "string") {
+	if (ctx !== undefined && "token" in ctx && typeof ctx.token === "string") {
 		return ctx.token;
 	}
 	return "";
@@ -52,7 +52,7 @@ export const parseRepositoryPath = (repository: string): ParsedRepository | null
 
 export const validateRepositoryIdentifier = (repository: string): ValidatedRepository => {
 	const scrubbed = scrubRepositoryUrl(repository);
-	const isValid = scrubbed !== "" && IDENTIFIER_REGEXP.test(scrubbed) === true;
+	const isValid = scrubbed !== "" && IDENTIFIER_REGEXP.test(scrubbed);
 	return { isValid, scrubbed };
 };
 

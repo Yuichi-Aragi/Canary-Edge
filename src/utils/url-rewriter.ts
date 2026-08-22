@@ -1,4 +1,3 @@
-
 import rehypeParse from "rehype-parse";
 import rehypeStringify from "rehype-stringify";
 import remarkGfm from "remark-gfm";
@@ -15,11 +14,10 @@ import type { Definition as MdastDefinition, Image as MdastImage, Link as MdastL
 import type { Plugin as UnifiedPlugin } from "unified";
 import type { Result } from "./safe";
 
-
 const RepoConfigSchema = v.object({
 	repo: v.pipe(
 		v.string(),
-		v.regex(/^[^/]+\/[^/]+$/, "repo must be in 'owner/repo' format")
+		v.regex(/^[^/]+\/[^/]+$/, "repo must be in 'owner/repo' format"),
 	),
 	ref: v.optional(v.pipe(v.string(), v.minLength(1)), "HEAD"),
 });
@@ -32,7 +30,6 @@ interface UrlContext {
 	readonly repo: string;
 	readonly ref: string;
 }
-
 
 type UrlKind =
 	| { readonly type: "absolute_external" }
@@ -92,7 +89,6 @@ function classifyUrl(url: string, _ctx: UrlContext): UrlKind {
 	};
 }
 
-
 function resolveRelativePath(rawPath: string): string {
 	let p = rawPath;
 	while (p.startsWith("./")) {
@@ -138,7 +134,6 @@ function splitUrlComponents(url: string): {
 	return { path: url.substring(0, splitIdx), suffix: url.substring(splitIdx) };
 }
 
-
 type AssetTarget = "raw" | "blob";
 
 function rewriteUrl(
@@ -179,9 +174,12 @@ function rewriteUrl(
 			const base = target === "raw" ? ctx.rawBaseUrl : ctx.blobBaseUrl;
 			return `${base}/${kind.resolvedPath}${suffix}`;
 		}
+		default: {
+			const _exhaustive: never = kind;
+			throw new Error(`Unhandled URL kind: ${String(_exhaustive)}`);
+		}
 	}
 }
-
 
 function remarkRewriteUrls(ctx: UrlContext): UnifiedPlugin<[], MdastRoot> {
 	return function (): (tree: MdastRoot) => void {
@@ -213,7 +211,6 @@ function remarkRewriteUrls(ctx: UrlContext): UnifiedPlugin<[], MdastRoot> {
 	};
 }
 
-
 function remarkRewriteHtmlNodes(ctx: UrlContext): UnifiedPlugin<[], MdastRoot> {
 	return function (): (tree: MdastRoot) => void {
 		return function (tree: MdastRoot): void {
@@ -228,7 +225,7 @@ function remarkRewriteHtmlNodes(ctx: UrlContext): UnifiedPlugin<[], MdastRoot> {
 					return String(processed);
 				});
 
-				if (result.ok === true) {
+				if (result.ok) {
 					node.value = result.value;
 				} else {
 					console.warn("Canary Edge: Failed to rewrite inline HTML", result.error);
@@ -237,7 +234,6 @@ function remarkRewriteHtmlNodes(ctx: UrlContext): UnifiedPlugin<[], MdastRoot> {
 		};
 	};
 }
-
 
 const RESOURCE_ATTR_MAP: ReadonlyMap<string, readonly string[]> = new Map([
 	["img", ["src", "srcset"]],
@@ -313,7 +309,6 @@ function rewriteSrcset(srcset: string, ctx: UrlContext): string {
 		.join(", ");
 }
 
-
 const ASSET_EXTENSIONS: ReadonlySet<string> = new Set([
 	".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".ico", ".bmp", ".tiff", ".tif", ".avif",
 	".mp4", ".webm", ".ogg", ".ogv", ".mov", ".avi",
@@ -357,14 +352,13 @@ function buildContext(config: RepoConfig): UrlContext {
 	};
 }
 
-
 export function rewriteMdResourceUrls(
 	markdown: string,
 	repo: string,
 	ref = "HEAD"
 ): Result<string> {
 	const configParse = v.safeParse(RepoConfigSchema, { repo, ref });
-	if (configParse.success === false) {
+	if (!configParse.success) {
 		return safe.err(new Error(`Invalid repo config: repo="${repo}", ref="${ref}"`));
 	}
 

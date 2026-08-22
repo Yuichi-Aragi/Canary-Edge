@@ -28,27 +28,33 @@ export const parseHeaderList = (headers: Readonly<Record<string, unknown>>, key:
 };
 
 export const normalizeHeaders = (
-	input: RequestInit["headers"] | Readonly<Record<string, unknown>> | undefined,
+	input: RequestInit["headers"] | Readonly<Record<string, unknown>> | null | undefined,
 ): Record<string, string> => {
 	const headers: Record<string, string> = {};
 	if (input === undefined || input === null) {
 		return headers;
 	}
 
-	if (typeof Headers !== "undefined" && (input instanceof Headers || (typeof input === "object" && Symbol.iterator in input))) {
-		new Headers(input as HeadersInit).forEach((value: string, key: string): void => {
+	if (input instanceof Headers) {
+		input.forEach((value: string, key: string): void => {
 			headers[key.toLowerCase()] = value;
 		});
 		return headers;
 	}
 
-	if (typeof input === "object") {
-		for (const [key, value] of Object.entries(input)) {
-			if (value !== undefined && value !== null) {
-				headers[key.toLowerCase()] = Array.isArray(value)
-					? value.join(", ")
-					: String(value);
+	if (Symbol.iterator in input) {
+		const entries = input as Iterable<readonly [unknown, unknown]>;
+		for (const [key, value] of entries) {
+			if (typeof key === "string" && value !== undefined && value !== null) {
+				headers[key.toLowerCase()] = headerToString(value);
 			}
+		}
+		return headers;
+	}
+
+	for (const [key, value] of Object.entries(input)) {
+		if (value !== undefined && value !== null) {
+			headers[key.toLowerCase()] = headerToString(value);
 		}
 	}
 
@@ -62,7 +68,7 @@ export const toDataBuffer = (data: unknown): ArrayBuffer | null => {
 	if (data instanceof ArrayBuffer) {
 		return data;
 	}
-	if (ArrayBuffer.isView(data) === true) {
+	if (ArrayBuffer.isView(data)) {
 		const view = data;
 		const viewBuffer = new ArrayBuffer(view.byteLength);
 		new Uint8Array(viewBuffer).set(new Uint8Array(view.buffer, view.byteOffset, view.byteLength));

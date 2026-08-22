@@ -88,10 +88,7 @@ function apiStringify(val: unknown): string {
 			}
 			return value;
 		});
-		if (jsonStr !== undefined) {
-			return jsonStr;
-		}
-		return "[Unstringifiable Object]";
+		return jsonStr;
 	} catch (err: unknown) {
 		const errMsg = err instanceof Error ? err.message : String(err);
 		return `[Unstringifiable Object: ${errMsg}]`;
@@ -147,7 +144,7 @@ function checkFlowOptions(options?: Readonly<FlowOptions>): Error | undefined {
 	}
 	if (options?.isDestroyed !== undefined) {
 		const destroyed = options.isDestroyed();
-		if (destroyed === true) {
+		if (destroyed) {
 			const err = new Error("Operation context destroyed");
 			err.name = "DestroyedError";
 			return err;
@@ -174,7 +171,7 @@ class FlowContext<E> {
 	public constructor(private readonly options?: Readonly<FlowOptions>) {
 		const unwrap = <U, F>(res: Result<U, F>, mapErr?: (err: F) => E): U => {
 			this.checkpoint();
-			if (res.ok === true) {
+			if (res.ok) {
 				return res.value;
 			}
 			const unwrappedErr = mapErr !== undefined ? mapErr(res.error) : res.error;
@@ -184,8 +181,8 @@ class FlowContext<E> {
 		};
 
 		this.$ = Object.assign(unwrap, {
-			checkpoint: this.checkpoint.bind(this)
-		}) as Unwrapper<E>;
+			checkpoint: this.checkpoint.bind(this),
+		});
 	}
 
 	public checkpoint(): void {
@@ -369,7 +366,7 @@ function apiCallable<T, E = Error>(
 		executionErr = err;
 	}
 
-	if (threw === false && ctx.hasBailed === false) {
+	if (!threw && !ctx.hasBailed) {
 		try {
 			const lateErr = checkFlowOptions(options);
 			if (lateErr !== undefined) {
@@ -418,7 +415,7 @@ async function apiCallableAsync<T, E = Error>(
 		executionErr = err;
 	}
 
-	if (threw === false && ctx.hasBailed === false) {
+	if (!threw && !ctx.hasBailed) {
 		try {
 			const lateErr = checkFlowOptions(options);
 			if (lateErr !== undefined) {
@@ -459,7 +456,7 @@ function apiWrap<Args extends readonly unknown[], T, This>(
 			if (earlyErr !== undefined) {
 				return { ok: false, error: earlyErr };
 			}
-			return { ok: true, value: Reflect.apply(fn, this, args) as T };
+			return { ok: true, value: Reflect.apply(fn, this, args) };
 		} catch (err: unknown) {
 			return { ok: false, error: normalizeError(err) };
 		}
@@ -476,7 +473,7 @@ function apiWrapAsync<Args extends readonly unknown[], T, This>(
 			if (earlyErr !== undefined) {
 				return { ok: false, error: earlyErr };
 			}
-			const value = await (Reflect.apply(fn, this, args) as Promise<T>);
+			const value = await Reflect.apply(fn, this, args);
 			const lateErr = checkFlowOptions(options);
 			if (lateErr !== undefined) {
 				return { ok: false, error: lateErr };
@@ -524,7 +521,7 @@ async function apitryAsync<T, E = Error>(
 }
 
 function apiUnwrap<T, E>(res: Result<T, E>, message?: string): T {
-	if (res.ok === true) {
+	if (res.ok) {
 		return res.value;
 	}
 	if (isErrorLike(res.error)) {
@@ -539,21 +536,21 @@ function apiUnwrap<T, E>(res: Result<T, E>, message?: string): T {
 }
 
 function apiUnwrapOr<T, E>(res: Result<T, E>, fallback: T): T {
-	if (res.ok === true) {
+	if (res.ok) {
 		return res.value;
 	}
 	return fallback;
 }
 
 function apiUnwrapOrElse<T, E>(res: Result<T, E>, fallbackFn: (err: E) => T): T {
-	if (res.ok === true) {
+	if (res.ok) {
 		return res.value;
 	}
 	return fallbackFn(res.error);
 }
 
 function apiAssertOk<T, E>(res: Result<T, E>, message?: string): asserts res is Ok<T> {
-	if (res.ok === false) {
+	if (!res.ok) {
 		if (isErrorLike(res.error)) {
 			if (message !== undefined) {
 				throw new Error(`${message}: ${res.error.message}`, { cause: res.error });
@@ -567,7 +564,7 @@ function apiAssertOk<T, E>(res: Result<T, E>, message?: string): asserts res is 
 }
 
 function apiAssertErr<T, E>(res: Result<T, E>, message?: string): asserts res is Err<E> {
-	if (res.ok === true) {
+	if (res.ok) {
 		const msg = message ?? "Assertion failed: Expected Err";
 		const str = apiStringify(res.value);
 		const truncated = str.length > 200 ? `${str.slice(0, 200)}...` : str;
@@ -588,21 +585,13 @@ function apiAll<T extends readonly Result<unknown, unknown>[]>(
 		return { ok: false, error: normalizeError(err) } as unknown as Err<InferErr<T[number]>>;
 	}
 
-	if (!Array.isArray(results)) {
-		return { ok: false, error: new Error("all requires an array of results") } as unknown as Err<InferErr<T[number]>>;
-	}
-
 	const values: unknown[] = [];
 	for (const res of results) {
-		const typedRes = res as Result<unknown, unknown>;
-		if (typedRes === null || typeof typedRes !== "object" || !("ok" in typedRes)) {
-			return { ok: false, error: new Error("Invalid Result object") } as unknown as Err<InferErr<T[number]>>;
-		}
-		if (typedRes.ok === false) {
-			const errResult: Err<InferErr<T[number]>> = { ok: false, error: typedRes.error as InferErr<T[number]> };
+		if (!res.ok) {
+			const errResult: Err<InferErr<T[number]>> = { ok: false, error: res.error as InferErr<T[number]> };
 			return errResult;
 		}
-		values.push(typedRes.value);
+		values.push(res.value);
 	}
 	return { ok: true, value: values as { -readonly [P in keyof T]: InferOk<T[P]> } };
 }
@@ -614,10 +603,8 @@ async function apiAllAsync<T extends readonly Promise<Result<unknown, unknown>>[
 	try {
 		const earlyErr = checkFlowOptions(options);
 		if (earlyErr !== undefined) {
-			if (Array.isArray(promises)) {
-				for (const p of promises) {
-					Promise.resolve(p).catch((): void => {});
-				}
+			for (const p of promises) {
+				Promise.resolve(p).catch((): void => {});
 			}
 			return { ok: false, error: earlyErr } as unknown as Err<InferErr<Awaited<T[number]>>>;
 		}
@@ -625,18 +612,14 @@ async function apiAllAsync<T extends readonly Promise<Result<unknown, unknown>>[
 		return { ok: false, error: normalizeError(err) } as unknown as Err<InferErr<Awaited<T[number]>>>;
 	}
 
-	if (!Array.isArray(promises)) {
-		return { ok: false, error: new Error("allAsync requires an array of promises") } as unknown as Err<InferErr<Awaited<T[number]>>>;
-	}
-
-	return await new Promise((resolve): void => {
+	return new Promise((resolve): void => {
 		if (promises.length === 0) {
 			resolve({ ok: true, value: [] as unknown as { -readonly [P in keyof T]: InferOk<Awaited<T[P]>> } });
 			return;
 		}
 		
 		let results: unknown[] | null = new Array(promises.length);
-		let pending = 0;
+		let pending = promises.length;
 		let done = false;
 
 		const cleanup = (listener: () => void): void => {
@@ -653,7 +636,7 @@ async function apiAllAsync<T extends readonly Promise<Result<unknown, unknown>>[
 			results = null;
 			cleanup(abortListener);
 			try {
-				const err = checkFlowOptions(options) ?? new Error("Aborted");
+				const err = checkFlowOptions(options) ?? new Error("Operation aborted");
 				resolve({ ok: false, error: err } as unknown as Err<InferErr<Awaited<T[number]>>>);
 			} catch (err: unknown) {
 				resolve({ ok: false, error: normalizeError(err) } as unknown as Err<InferErr<Awaited<T[number]>>>);
@@ -661,30 +644,20 @@ async function apiAllAsync<T extends readonly Promise<Result<unknown, unknown>>[
 		};
 
 		const signal = options?.signal;
-		if (signal !== undefined && signal !== null) {
-			if (signal.aborted === true) {
+		if (signal !== undefined) {
+			if (signal.aborted) {
 				abortListener();
 			} else {
 				signal.addEventListener("abort", abortListener, { once: true });
 			}
 		}
 
-		const typedPromises = promises as readonly Promise<Result<unknown, unknown>>[];
-		typedPromises.forEach((p, i): void => {
-			pending += 1;
-			
+		promises.forEach((p, i): void => {
 			Promise.resolve(p).then((res: Result<unknown, unknown>): void => {
 				if (done) {
 					return;
 				}
-				if (res === null || typeof res !== "object" || !("ok" in res)) {
-					done = true;
-					results = null;
-					cleanup(abortListener);
-					resolve({ ok: false, error: new Error("Invalid Result object") } as unknown as Err<InferErr<Awaited<T[number]>>>);
-					return;
-				}
-				if (res.ok === false) {
+				if (!res.ok) {
 					done = true;
 					results = null;
 					cleanup(abortListener);
@@ -767,10 +740,7 @@ function createApi(baseOptions: Readonly<FlowOptions> = {}): Api {
 			if (param instanceof AbortSignal) {
 				return createApi(baseOptions).with({ signal: param });
 			}
-			if (typeof param === "object" && param !== null) {
-				return createApi(baseOptions).with(param);
-			}
-			return createApi(baseOptions);
+			return createApi(baseOptions).with(param);
 		},
 		bind: (service: unknown): Api => {
 			const check = typeof service === "function"
@@ -780,7 +750,7 @@ function createApi(baseOptions: Readonly<FlowOptions> = {}): Api {
 						if ("isDestroyed" in service && typeof service.isDestroyed === "function") {
 							return (service.isDestroyed as () => boolean)();
 						}
-						if ("disposed" in service && service.disposed === true) {
+						if ("disposed" in service && (service as { readonly disposed?: unknown }).disposed === true) {
 							return true;
 						}
 					}
@@ -818,7 +788,7 @@ function createApi(baseOptions: Readonly<FlowOptions> = {}): Api {
 		some: apiSome,
 	};
 
-	return Object.assign(callable, callableObj) as Api;
+	return Object.assign(callable, callableObj);
 }
 
 export const safe: Api = createApi();

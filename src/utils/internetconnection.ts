@@ -19,7 +19,7 @@ let cachedConnectivity: ConnectivityCacheEntry | null = null;
 let activeProbePromise: Promise<boolean> | null = null;
 
 async function executeProbe(): Promise<boolean> {
-	if (navigator.onLine === false) {
+	if (!navigator.onLine) {
 		return false;
 	}
 
@@ -49,7 +49,7 @@ async function executeProbe(): Promise<boolean> {
 		}
 	});
 
-	if (onlineRes.ok === false || onlineRes.value === null || onlineRes.value === undefined) {
+	if (!onlineRes.ok) {
 		return false;
 	}
 
@@ -58,21 +58,26 @@ async function executeProbe(): Promise<boolean> {
 }
 
 export async function isConnectedToInternet(forceCheck = false): Promise<boolean> {
-	if (navigator.onLine === false) {
+	if (!navigator.onLine) {
 		cachedConnectivity = { isOnline: false, timestamp: Date.now() };
 		return false;
 	}
 
 	const now = Date.now();
-	if (forceCheck === false && cachedConnectivity !== null) {
-		const ttl = cachedConnectivity.isOnline === true ? ONLINE_CACHE_TTL_MS : OFFLINE_CACHE_TTL_MS;
+	if (!forceCheck && cachedConnectivity !== null) {
+		const ttl = cachedConnectivity.isOnline ? ONLINE_CACHE_TTL_MS : OFFLINE_CACHE_TTL_MS;
 		if (now - cachedConnectivity.timestamp < ttl) {
 			return cachedConnectivity.isOnline;
 		}
 	}
 
 	if (activeProbePromise !== null) {
-		return await activeProbePromise;
+		try {
+			return await activeProbePromise;
+		} catch (error: unknown) {
+			console.error("[Connectivity] Probe resolution failed:", error);
+			return false;
+		}
 	}
 
 	activeProbePromise = (async (): Promise<boolean> => {
@@ -85,12 +90,17 @@ export async function isConnectedToInternet(forceCheck = false): Promise<boolean
 		}
 	})();
 
-	return await activeProbePromise;
+	try {
+		return await activeProbePromise;
+	} catch (error: unknown) {
+		console.error("[Connectivity] Probe resolution failed:", error);
+		return false;
+	}
 }
 
 export async function assertInternetConnection(forceCheck = false): Promise<void> {
 	const online = await isConnectedToInternet(forceCheck);
-	if (online === false) {
+	if (!online) {
 		throw new NetworkError(ERROR_MESSAGES.OFFLINE);
 	}
 }

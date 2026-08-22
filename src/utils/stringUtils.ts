@@ -3,10 +3,10 @@ import * as v from "valibot";
 
 import { safe } from "@/utils/safe";
 
-const MAX_INPUT_LENGTH: number = 2048;
-const MAX_PATH_DEPTH: number = 16;
-const MAX_AT_SIGNS: number = 1;
-const MAX_SCP_COLONS: number = 1;
+const MAX_INPUT_LENGTH = 2048;
+const MAX_PATH_DEPTH = 16;
+const MAX_AT_SIGNS = 1;
+const MAX_SCP_COLONS = 1;
 
 const ALLOWED_PROTOCOLS: ReadonlySet<string> = new Set<string>([
 	"http:",
@@ -102,7 +102,7 @@ const SingleSegmentSchema = v.pipe(
 );
 
 const containsSurrogates = (input: string): boolean => {
-	for (let i: number = 0; i < input.length; i++) {
+	for (let i = 0; i < input.length; i++) {
 		const code: number = input.charCodeAt(i);
 		if (code >= 0xd800 && code <= 0xdfff) {
 			return true;
@@ -112,7 +112,7 @@ const containsSurrogates = (input: string): boolean => {
 };
 
 const containsDoubleEncoding = (input: string): boolean => {
-	for (let i: number = 0; i < input.length - 2; i++) {
+	for (let i = 0; i < input.length - 2; i++) {
 		if (
 			input.charAt(i) === "%" &&
 			input.charAt(i + 1) === "2" &&
@@ -127,15 +127,15 @@ const containsDoubleEncoding = (input: string): boolean => {
 const containsEncodedTraversal = (input: string): boolean => {
 	const lower: string = input.toLowerCase();
 	return (
-		lower.includes("%2e") === true ||
-		lower.includes("%2f") === true ||
-		lower.includes("%5c") === true
+		lower.includes("%2e") ||
+		lower.includes("%2f") ||
+		lower.includes("%5c")
 	);
 };
 
 const stripControlAndFormatChars = (input: string): string => {
-	let out: string = "";
-	for (let i: number = 0; i < input.length; i++) {
+	let out = "";
+	for (let i = 0; i < input.length; i++) {
 		const code: number = input.charCodeAt(i);
 		if ((code >= 0x00 && code <= 0x1f) || code === 0x7f || (code >= 0x80 && code <= 0x9f) || code === 0x00ad) {
 			continue;
@@ -164,8 +164,8 @@ const sanitizeRawInput = (raw: string): string => {
 };
 
 const stripBrowserIgnoredChars = (input: string): string => {
-	let out: string = "";
-	for (let i: number = 0; i < input.length; i++) {
+	let out = "";
+	for (let i = 0; i < input.length; i++) {
 		const c: number = input.charCodeAt(i);
 		if (c !== 0x09 && c !== 0x0a && c !== 0x0d) {
 			out += input.charAt(i);
@@ -175,13 +175,13 @@ const stripBrowserIgnoredChars = (input: string): string => {
 };
 
 const isAllowedGitHubHost = (hostname: string): boolean => {
-	if (hostname.includes("[") === true || hostname.includes("]") === true) {
+	if (hostname.includes("[") || hostname.includes("]")) {
 		return false;
 	}
 
 	let normalized: string = hostname.toLowerCase();
 
-	while (normalized.endsWith(".") === true) {
+	while (normalized.endsWith(".")) {
 		normalized = normalized.slice(0, -1);
 	}
 
@@ -191,20 +191,20 @@ const isAllowedGitHubHost = (hostname: string): boolean => {
 		if (port.length === 0 || port.length > 5) {
 			return false;
 		}
-		for (let i: number = 0; i < port.length; i++) {
+		for (let i = 0; i < port.length; i++) {
 			const c: number = port.charCodeAt(i);
 			if (c < 0x30 || c > 0x39) {
 				return false;
 			}
 		}
-		const portNum: number = Number(port);
+		const portNum = Number(port);
 		if (portNum < 1 || portNum > 65535) {
 			return false;
 		}
 		normalized = normalized.slice(0, colonIdx);
 	}
 
-	for (let i: number = 0; i < normalized.length; i++) {
+	for (let i = 0; i < normalized.length; i++) {
 		const c: number = normalized.charCodeAt(i);
 		if (c > 0x7e) {
 			return false;
@@ -220,14 +220,14 @@ const isSafeSegment = (segment: string): boolean => {
 		return false;
 	}
 
-	for (let i: number = 0; i < len; i++) {
+	for (let i = 0; i < len; i++) {
 		const c: number = segment.charCodeAt(i);
 
 		if (c > 0x7e) {
 			return false;
 		}
 
-		if (FORBIDDEN_SEGMENT_CHARS.has(c) === true) {
+		if (FORBIDDEN_SEGMENT_CHARS.has(c)) {
 			return false;
 		}
 
@@ -236,7 +236,7 @@ const isSafeSegment = (segment: string): boolean => {
 		const isLower: boolean = c >= 0x61 && c <= 0x7a;
 		const isSpecial: boolean = c === 0x2d || c === 0x2e || c === 0x5f;
 
-		if (isDigit === false && isUpper === false && isLower === false && isSpecial === false) {
+		if (!isDigit && !isUpper && !isLower && !isSpecial) {
 			return false;
 		}
 	}
@@ -251,23 +251,23 @@ const isTraversalToken = (segment: string): boolean => {
 		lower === "." ||
 		lower === "..;" ||
 		lower === ".;" ||
-		lower.startsWith("..;") === true ||
-		lower.startsWith(".;") === true
+		lower.startsWith("..;") ||
+		lower.startsWith(".;")
 	);
 };
 
 const extractPathSegments = (
 	pathname: string,
 ): readonly string[] | null => {
-	if (pathname.includes(";") === true) {
+	if (pathname.includes(";")) {
 		return null;
 	}
 
-	if (containsEncodedTraversal(pathname) === true) {
+	if (containsEncodedTraversal(pathname)) {
 		return null;
 	}
 
-	const stripped: string = pathname.startsWith("/") === true
+	const stripped: string = pathname.startsWith("/")
 		? pathname.slice(1)
 		: pathname;
 
@@ -286,7 +286,7 @@ const extractPathSegments = (
 	for (const piece of raw) {
 		const trimmedPiece: string = trim(piece);
 
-		if (isTraversalToken(trimmedPiece) === true) {
+		if (isTraversalToken(trimmedPiece)) {
 			return null;
 		}
 
@@ -302,7 +302,7 @@ const tryParseUrl = (input: string): URL | null => {
 	const parsedResult = safe.try((): URL => {
 		return new URL(input);
 	});
-	return parsedResult.ok === true ? parsedResult.value : null;
+	return parsedResult.ok ? parsedResult.value : null;
 };
 
 const stripGitSuffix = (segment: string): string => {
@@ -334,7 +334,7 @@ const safeDecodeURIComponent = (input: string): string | null => {
 	const decodeResult = safe.try((): string => {
 		return decodeURIComponent(input);
 	});
-	return decodeResult.ok === true ? decodeResult.value : null;
+	return decodeResult.ok ? decodeResult.value : null;
 };
 
 const buildResultFromSegments = (
@@ -348,7 +348,7 @@ const buildResultFromSegments = (
 	}
 
 	for (const part of parts) {
-		if (isSafeSegment(part) === false) {
+		if (!isSafeSegment(part)) {
 			return "";
 		}
 	}
@@ -361,20 +361,20 @@ const buildResultFromSegments = (
 			return "";
 		}
 
-		const candidate: string = `${owner}/${repo}`;
+		const candidate = `${owner}/${repo}`;
 		const result = v.safeParse(RepositoryIdentifierSchema, candidate);
-		return result.success === true ? result.output : "";
+		return result.success ? result.output : "";
 	}
 
 	if (parts.length === 1) {
 		const [single = ""] = parts;
 
-		if (RESERVED_KEYWORDS.has(single.toLowerCase()) === true) {
+		if (RESERVED_KEYWORDS.has(single.toLowerCase())) {
 			return "";
 		}
 
 		const result = v.safeParse(SingleSegmentSchema, single);
-		return result.success === true ? result.output : "";
+		return result.success ? result.output : "";
 	}
 
 	return "";
@@ -382,7 +382,7 @@ const buildResultFromSegments = (
 
 export const scrubRepositoryUrl = (url: string): string => {
 	const inputCheck = v.safeParse(v.string(), url);
-	if (inputCheck.success === false) {
+	if (!inputCheck.success) {
 		return "";
 	}
 
@@ -390,11 +390,11 @@ export const scrubRepositoryUrl = (url: string): string => {
 		return "";
 	}
 
-	if (containsSurrogates(inputCheck.output) === true) {
+	if (containsSurrogates(inputCheck.output)) {
 		return "";
 	}
 
-	if (containsDoubleEncoding(inputCheck.output) === true) {
+	if (containsDoubleEncoding(inputCheck.output)) {
 		return "";
 	}
 
@@ -406,7 +406,7 @@ export const scrubRepositoryUrl = (url: string): string => {
 		return "";
 	}
 
-	for (let i: number = 0; i < clean.length; i++) {
+	for (let i = 0; i < clean.length; i++) {
 		if (clean.charCodeAt(i) > 0x7e) {
 			return "";
 		}
@@ -414,8 +414,8 @@ export const scrubRepositoryUrl = (url: string): string => {
 
 	if (
 		clean.length >= 2 &&
-		((clean.startsWith('"') === true && clean.endsWith('"') === true) ||
-			(clean.startsWith("'") === true && clean.endsWith("'") === true))
+		((clean.startsWith('"') && clean.endsWith('"')) ||
+			(clean.startsWith("'") && clean.endsWith("'")))
 	) {
 		clean = trim(clean.slice(1, -1));
 	}
@@ -424,13 +424,13 @@ export const scrubRepositoryUrl = (url: string): string => {
 	}
 
 	const lower: string = clean.toLowerCase();
-	if (lower.startsWith("gh:") === true) {
+	if (lower.startsWith("gh:")) {
 		clean = trim(clean.slice(3));
-	} else if (lower.startsWith("github:") === true) {
+	} else if (lower.startsWith("github:")) {
 		clean = trim(clean.slice(7));
 	}
 
-	if (clean.toLowerCase().startsWith("git+") === true) {
+	if (clean.toLowerCase().startsWith("git+")) {
 		clean = clean.slice(4);
 	}
 	if (clean.length === 0) {
@@ -454,23 +454,16 @@ export const scrubRepositoryUrl = (url: string): string => {
 	}
 
 	let parsedUrl: URL | null = null;
-	let isUrlMode: boolean = false;
 
-	if (isUrlMode === false && clean.includes("://") === true) {
+	if (clean.includes("://")) {
 		parsedUrl = tryParseUrl(clean);
-		if (parsedUrl !== null) {
-			isUrlMode = true;
-		}
 	}
 
-	if (isUrlMode === false && clean.startsWith("//") === true) {
+	if (parsedUrl === null && clean.startsWith("//")) {
 		parsedUrl = tryParseUrl(`https:${clean}`);
-		if (parsedUrl !== null) {
-			isUrlMode = true;
-		}
 	}
 
-	if (isUrlMode === false) {
+	if (parsedUrl === null) {
 		const atCount: number = clean.split("@").length - 1;
 		if (atCount > MAX_AT_SIGNS) {
 			return "";
@@ -497,62 +490,56 @@ export const scrubRepositoryUrl = (url: string): string => {
 				const sshHost: string = afterAt.slice(0, colonIdx);
 				const sshPath: string = afterAt.slice(colonIdx + 1);
 
-				if (isAllowedGitHubHost(sshHost) === false) {
+				if (!isAllowedGitHubHost(sshHost)) {
 					return "";
 				}
 
 				parsedUrl = tryParseUrl(
 					`ssh://git@${sshHost}/${sshPath}`,
 				);
-				if (parsedUrl !== null) {
-					isUrlMode = true;
-				}
 			}
 		}
 	}
 
-	if (isUrlMode === false) {
+	if (parsedUrl === null) {
 		const firstSlash: number = clean.indexOf("/");
 		if (firstSlash > 0) {
 			const candidateHost: string = clean.slice(0, firstSlash).toLowerCase();
 			const hostNoPort: string = candidateHost.split(":")[0] ?? "";
-			if (isAllowedGitHubHost(hostNoPort) === true) {
+			if (isAllowedGitHubHost(hostNoPort)) {
 				parsedUrl = tryParseUrl(`https://${clean}`);
-				if (parsedUrl !== null) {
-					isUrlMode = true;
-				}
 			}
 		}
 	}
 
-	if (isUrlMode === true && parsedUrl !== null) {
+	if (parsedUrl !== null) {
 		const { protocol, hostname, port, pathname } = parsedUrl;
 
-		if (ALLOWED_PROTOCOLS.has(protocol) === false) {
+		if (!ALLOWED_PROTOCOLS.has(protocol)) {
 			return "";
 		}
 
-		if (isSafeUserinfo(parsedUrl) === false) {
+		if (!isSafeUserinfo(parsedUrl)) {
 			return "";
 		}
 
-		if (isAllowedGitHubHost(hostname) === false) {
+		if (!isAllowedGitHubHost(hostname)) {
 			return "";
 		}
 
 		if (port !== "") {
-			const portNum: number = Number(port);
+			const portNum = Number(port);
 			const isStandard: boolean =
 				(protocol === "https:" && portNum === 443) ||
 				(protocol === "http:" && portNum === 80) ||
 				(protocol === "ssh:" && portNum === 22) ||
 				(protocol === "git:" && portNum === 9418);
-			if (isStandard === false) {
+			if (!isStandard) {
 				return "";
 			}
 		}
 
-		if (hostname.includes(":") === true) {
+		if (hostname.includes(":")) {
 			return "";
 		}
 
@@ -563,18 +550,18 @@ export const scrubRepositoryUrl = (url: string): string => {
 			return "";
 		}
 
-		if (containsEncodedTraversal(decodedPath) === true) {
+		if (containsEncodedTraversal(decodedPath)) {
 			return "";
 		}
 
 		path = decodedPath;
 
-		const withoutLeadingSlash: string = path.startsWith("/") === true
+		const withoutLeadingSlash: string = path.startsWith("/")
 			? path.slice(1)
 			: path;
 
 		for (const prefix of STRIPPABLE_PATH_PREFIXES) {
-			if (withoutLeadingSlash.toLowerCase().startsWith(prefix) === true) {
+			if (withoutLeadingSlash.toLowerCase().startsWith(prefix)) {
 				path = `/${withoutLeadingSlash.slice(prefix.length)}`;
 				break;
 			}
@@ -603,7 +590,7 @@ export const scrubRepositoryUrl = (url: string): string => {
 		return "";
 	}
 
-	if (barePath.includes(";") === true) {
+	if (barePath.includes(";")) {
 		return "";
 	}
 
@@ -613,14 +600,14 @@ export const scrubRepositoryUrl = (url: string): string => {
 	}
 	barePath = decodedBare;
 
-	if (containsEncodedTraversal(barePath) === true) {
+	if (containsEncodedTraversal(barePath)) {
 		return "";
 	}
 
-	while (barePath.startsWith("/") === true) {
+	while (barePath.startsWith("/")) {
 		barePath = barePath.slice(1);
 	}
-	while (barePath.endsWith("/") === true) {
+	while (barePath.endsWith("/")) {
 		barePath = barePath.slice(0, -1);
 	}
 	if (barePath.length === 0) {
