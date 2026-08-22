@@ -7,7 +7,7 @@ import { safe } from "@/utils/safe";
 export class CEWindowManager {
 	private root: Root | null = null;
 	private containerEl: HTMLElement | null = null;
-	private activeToken: number = 0;
+	private activeToken = 0;
 
 	public async open(plugin: CanaryEdgePlugin): Promise<void> {
 		if (this.root !== null) {
