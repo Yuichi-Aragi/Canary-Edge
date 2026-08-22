@@ -245,7 +245,7 @@ async function runBuild() {
       platform: "browser",
       format: "cjs",
       target: "es2020",
-      outdir: "assets",
+      outdir: ".",
       banner,
       minify: !isDevelopment,
       minifyWhitespace: !isDevelopment,
