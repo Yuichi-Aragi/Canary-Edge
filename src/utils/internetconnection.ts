@@ -5,10 +5,12 @@ import { safe } from "@/utils/safe";
 
 import type { RequestUrlResponse } from "obsidian";
 
-const CONNECTIVITY_PROBE_URL = "https://obsidian.md";
-const PROBE_TIMEOUT_MS = 3000;
-const ONLINE_CACHE_TTL_MS = 5000;
-const OFFLINE_CACHE_TTL_MS = 1500;
+const CONNECTIVITY_PROBE_URL = "https://captive.apple.com/hotspot-detect.html" as const;
+const PROBE_TIMEOUT_MS = 3000 as const;
+const ONLINE_CACHE_TTL_MS = 5000 as const;
+const OFFLINE_CACHE_TTL_MS = 1500 as const;
+const HTTP_STATUS_OK_MIN = 200 as const;
+const HTTP_STATUS_REDIRECT_MAX = 400 as const;
 
 interface ConnectivityCacheEntry {
 	readonly isOnline: boolean;
@@ -24,7 +26,7 @@ async function executeProbe(): Promise<boolean> {
 	}
 
 	const cacheBuster = `${String(Date.now())}-${String(Math.random())}`;
-	const probeUrl = `${CONNECTIVITY_PROBE_URL}/?${cacheBuster}`;
+	const probeUrl = `${CONNECTIVITY_PROBE_URL}?_=${cacheBuster}`;
 
 	let timeoutId: number | undefined;
 	const timeoutPromise = new Promise<never>((_, reject): void => {
@@ -35,8 +37,12 @@ async function executeProbe(): Promise<boolean> {
 
 	const requestPromise = requestUrl({
 		url: probeUrl,
-		method: "HEAD",
+		method: "GET",
 		throw: false,
+		headers: {
+			"Cache-Control": "no-cache, no-store, must-revalidate",
+			Pragma: "no-cache",
+		},
 	});
 
 	const onlineRes = await safe.tryAsync(async (): Promise<RequestUrlResponse> => {
@@ -54,7 +60,7 @@ async function executeProbe(): Promise<boolean> {
 	}
 
 	const statusCode = onlineRes.value.status;
-	return statusCode >= 200 && statusCode < 400;
+	return statusCode >= HTTP_STATUS_OK_MIN && statusCode < HTTP_STATUS_REDIRECT_MAX;
 }
 
 export async function isConnectedToInternet(forceCheck = false): Promise<boolean> {
