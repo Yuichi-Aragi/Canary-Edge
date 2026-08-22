@@ -1,7 +1,7 @@
 {
   "id": "canary-edge",
   "name": "Canary Edge", 
-  "version": "1.0.3",
+  "version": "1.0.4",
   "minAppVersion": "1.11.4",
   "description": "An advanced plugin testing and version control utility. Features deep release selection, pre-flight changelog audits, compatibility verification, and granular overrides.",
   "author": "Yuichi-Aragi",
