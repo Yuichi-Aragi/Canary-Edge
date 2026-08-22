@@ -70,9 +70,9 @@ export function InstallPluginVersionAuthTab({
 								<Suspense fallback={<div className="ce-version-card is-loading"><span className="ce-version-name">Loading...</span></div>}>
 									<LazyVersionSelector
 										channel={channel}
-										disabled={isVersionsSuccess === false || isPending === true || isConflict === true}
+										disabled={!isVersionsSuccess || isPending || isConflict}
 										repoUrl={repoUrl}
-										tokenSecretId={watchedUseToken === true ? tokenSecretId : undefined}
+										tokenSecretId={watchedUseToken ? tokenSecretId : undefined}
 										value={field.value}
 										versions={versions}
 										onChange={field.onChange}
@@ -85,7 +85,7 @@ export function InstallPluginVersionAuthTab({
 				description="Select a specific release tag to install, or target the latest available version."
 				icon="git-branch"
 				iconVariant="blue"
-				isDisabled={isVersionsSuccess === false || isPending === true || isConflict === true}
+				isDisabled={!isVersionsSuccess || isPending || isConflict}
 				title="Plugin Version"
 			/>
 
@@ -98,7 +98,7 @@ export function InstallPluginVersionAuthTab({
 						description={
 							<div className="ce-pat-description">
 								<span>Configure an isolated authentication token for this repository to bypass rate limits or access private sources.</span>
-								{watchedUseToken === true ? (
+								{watchedUseToken ? (
 									<div className="ce-pat-input-wrapper">
 										<Controller
 											control={control}
@@ -125,8 +125,8 @@ export function InstallPluginVersionAuthTab({
 										) : null}
 										{tokenInfo !== null && tokenInfo !== undefined ? (
 											<div className="ce-token-info">
-												<div className={clsx("ce-token-status", isTokenValid === true ? "is-valid" : "is-invalid")}>
-													{isTokenValid === true ? "Token is valid" : `Token is invalid: ${tokenInfo.error.message}`}
+												<div className={clsx("ce-token-status", isTokenValid ? "is-valid" : "is-invalid")}>
+													{isTokenValid ? "Token is valid" : `Token is invalid: ${tokenInfo.error.message}`}
 												</div>
 											</div>
 										) : null}

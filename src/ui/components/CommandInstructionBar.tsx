@@ -16,7 +16,7 @@ export const CommandInstructionBar = memo(
 
 		const { isMobile, isMacOS: isMac } = Platform;
 
-		if (isMobile === true) {
+		if (isMobile) {
 			return (
 				<div
 					aria-label={finalAriaLabel}
@@ -49,11 +49,11 @@ export const CommandInstructionBar = memo(
 					<span>Navigate</span>
 				</span>
 				<span className="ce-command-instruction-item">
-					<kbd className="ce-kbd">{isMac === true ? "↵" : "Enter"}</kbd>
+					<kbd className="ce-kbd">{isMac ? "↵" : "Enter"}</kbd>
 					<span>Select</span>
 				</span>
 				<span className="ce-command-instruction-item">
-					<kbd className="ce-kbd">{isMac === true ? "⎋" : "Esc"}</kbd>
+					<kbd className="ce-kbd">{isMac ? "⎋" : "Esc"}</kbd>
 					<span>{finalDismissLabel}</span>
 				</span>
 				{totalResults > 0 && activeIndex >= 0 ? (

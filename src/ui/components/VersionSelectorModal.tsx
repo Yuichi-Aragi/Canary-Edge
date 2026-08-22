@@ -52,8 +52,8 @@ const VersionSelectorLoadMoreItem = memo(
 				aria-selected={isSelected}
 				className={clsx(
 					"ce-command-palette-load-more-item",
-					isSelected === true ? "is-selected" : "",
-					isLoadingMore === true ? "is-loading" : "",
+					isSelected ? "is-selected" : "",
+					isLoadingMore ? "is-loading" : "",
 				)}
 				role="option"
 				value="__load_more__"
@@ -62,11 +62,11 @@ const VersionSelectorLoadMoreItem = memo(
 			>
 				<div className="ce-load-more-btn">
 					<Icon
-						className={clsx("ce-load-more-icon", isLoadingMore === true ? "ce-spin" : "")}
-						name={isLoadingMore === true ? "loader-2" : "download"}
+						className={clsx("ce-load-more-icon", isLoadingMore ? "ce-spin" : "")}
+						name={isLoadingMore ? "loader-2" : "download"}
 					/>
 					<span className="ce-load-more-text">
-						{isLoadingMore === true ? "Fetching additional versions..." : "Load more versions"}
+						{isLoadingMore ? "Fetching additional versions..." : "Load more versions"}
 					</span>
 				</div>
 			</Command.Item>
@@ -98,7 +98,7 @@ const VersionSelectorErrorRetryItem = memo(
 				className={clsx(
 					"ce-command-palette-load-more-item",
 					"ce-command-palette-error-item",
-					isSelected === true ? "is-selected" : "",
+					isSelected ? "is-selected" : "",
 				)}
 				role="option"
 				value="__error_retry__"
@@ -132,7 +132,7 @@ const VersionSelectorStandardItem = memo(
 		onSelect,
 	}: Omit<VersionSelectorItemProps, "isLoadingMore" | "errorMessage">): JSX.Element => {
 		const isLatest = versionItem.version === "latest";
-		const label = isLatest === true ? "Latest version" : versionItem.version;
+		const label = isLatest ? "Latest version" : versionItem.version;
 		const { badgeInfo, publishedTime } = versionItem;
 
 		const handleMouseEnter = useCallback((): void => {
@@ -147,7 +147,7 @@ const VersionSelectorStandardItem = memo(
 			<Command.Item
 				key={versionItem.version}
 				aria-selected={isSelected}
-				className={clsx("ce-command-palette-item", isSelected === true ? "is-selected" : "")}
+				className={clsx("ce-command-palette-item", isSelected ? "is-selected" : "")}
 				role="option"
 				value={versionItem.version.toLowerCase()}
 				onMouseEnter={handleMouseEnter}
@@ -168,7 +168,7 @@ const VersionSelectorStandardItem = memo(
 						) : null}
 					</div>
 				</div>
-				{isCurrentValue === true ? (
+				{isCurrentValue ? (
 					<Icon className="ce-command-palette-check-icon" name="check" />
 				) : null}
 			</Command.Item>

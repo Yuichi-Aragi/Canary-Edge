@@ -69,7 +69,7 @@ function RateLimitDashboardView({ state, actions }: RateLimitViewProps): JSX.Ele
 		error, 
 	} = state;
 
-	if (isLoading === true && rateLimit === undefined) {
+	if (isLoading && rateLimit === undefined) {
 		return (
 			<div className="ce-rate-limit-dashboard is-loading">
 				<RateLimitSkeleton />
@@ -77,7 +77,7 @@ function RateLimitDashboardView({ state, actions }: RateLimitViewProps): JSX.Ele
 		);
 	}
 
-	if ((isError === true && rateLimit === undefined) || rateLimit === undefined || metrics === null) {
+	if ((isError && rateLimit === undefined) || rateLimit === undefined || metrics === null) {
 		return (
 			<div aria-live="polite" className="ce-rate-limit-dashboard is-error-state" role="alert">
 				<div className="ce-rl-error-inner">
@@ -114,8 +114,8 @@ function RateLimitDashboardView({ state, actions }: RateLimitViewProps): JSX.Ele
 					<div className="ce-rl-title-group">
 						<span className="ce-rl-title">API Quota</span>
 					</div>
-					<span className={clsx("ce-rl-auth-badge", isAnonymous === true ? "is-anonymous" : "is-pat")}>
-						{isAnonymous === true ? "Anonymous" : "PAT Active"}
+					<span className={clsx("ce-rl-auth-badge", isAnonymous ? "is-anonymous" : "is-pat")}>
+						{isAnonymous ? "Anonymous" : "PAT Active"}
 					</span>
 				</div>
 
@@ -126,13 +126,13 @@ function RateLimitDashboardView({ state, actions }: RateLimitViewProps): JSX.Ele
 					</span>
 					<button
 						aria-label="Refresh API quota status"
-						className={clsx("ce-rl-refresh-btn", isBusy === true ? "is-spinning" : "")}
+						className={clsx("ce-rl-refresh-btn", isBusy ? "is-spinning" : "")}
 						disabled={isBusy}
-						title={isBusy === true ? "Refreshing quota..." : "Refresh quota"}
+						title={isBusy ? "Refreshing quota..." : "Refresh quota"}
 						type="button"
 						onClick={(e: ReactMouseEvent): void => {
 							e.preventDefault();
-							if (isBusy === false) {
+							if (!isBusy) {
 								actions.handleManualRefresh();
 							}
 						}}
@@ -188,7 +188,7 @@ function RateLimitDashboardView({ state, actions }: RateLimitViewProps): JSX.Ele
 				</div>
 			</div>
 
-			{isAnonymous === true ? (
+			{isAnonymous ? (
 				<div className="ce-rl-education-compact" role="note">
 					<div className="ce-rl-education-content">
 						<span>

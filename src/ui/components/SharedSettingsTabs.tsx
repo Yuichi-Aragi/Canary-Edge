@@ -235,7 +235,7 @@ export function SharedUpdateRulesTab({
 				isDisabled={isBusy}
 				title="Release Channel"
 			/>
-			{frozenState === true ? (
+			{frozenState ? (
 				<div className="ce-settings-note">
 					Note: Update rules are ignored while the plugin is frozen.
 				</div>
@@ -288,7 +288,7 @@ export function SharedAutomationTab({
 				title="Check for updates on load"
 				onChange={onCheckOnLoadEnabledChange}
 			/>
-			{checkOnLoad.enabled === true ? (
+			{checkOnLoad.enabled ? (
 				<ToggleSettingsBox
 					checked={checkOnLoad.autoDownload}
 					description="Automatically download and install updates found when CE loads. If disabled, only notifies of detected updates."
@@ -309,7 +309,7 @@ export function SharedAutomationTab({
 				isDisabled={isBusy}
 				title="Update check interval"
 				onChange={(v: boolean): void => {
-					onUpdateIntervalValueChange(v === true ? "24h" : false);
+					onUpdateIntervalValueChange(v ? "24h" : false);
 				}}
 			/>
 			{updateInterval.value !== false ? (
@@ -324,7 +324,7 @@ export function SharedAutomationTab({
 								step={60}
 								value={effectiveIntervalMinutes}
 								onChange={(v: number): void => {
-									if (isBusy === false) {
+									if (!isBusy) {
 										const duration = formatMinutesToDuration(v);
 										onUpdateIntervalValueChange(duration !== false ? duration : false);
 									}

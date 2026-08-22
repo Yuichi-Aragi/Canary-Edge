@@ -25,11 +25,11 @@ export function SharedReadmeTab(props: SharedReadmeTabProps): JSX.Element {
 		isEnabled
 	);
 
-	if (isLoading === true) {
+	if (isLoading) {
 		return <StateContainer message="Fetching README content..." type="loading" />;
 	}
 
-	if (isError === true) {
+	if (isError) {
 		return (
 			<StateContainer
 				message={error instanceof Error ? error.message : "Failed to load README file."}

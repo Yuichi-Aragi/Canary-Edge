@@ -57,7 +57,7 @@ export function BasePanel(props: BasePanelProps): JSX.Element | null {
 	});
 
 	useEffect((): (() => void) => {
-		if (isOpen === true) {
+		if (isOpen) {
 			isClosingRef.current = false;
 			registerPanel(panelId);
 		} else {
@@ -73,7 +73,7 @@ export function BasePanel(props: BasePanelProps): JSX.Element | null {
 	const depth = getPanelDepth(panelId);
 
 	const safeClose = useCallback((): void => {
-		if (isClosingRef.current === true) {
+		if (isClosingRef.current) {
 			return;
 		}
 		isClosingRef.current = true;
@@ -88,7 +88,7 @@ export function BasePanel(props: BasePanelProps): JSX.Element | null {
 	const { refs, context } = useFloating({
 		open: isOpen,
 		onOpenChange: (isCurrentlyOpen: boolean): void => {
-			if (isCurrentlyOpen === false && isTopRef.current === true) {
+			if (!isCurrentlyOpen && isTopRef.current) {
 				safeClose();
 			}
 		},
@@ -105,7 +105,7 @@ export function BasePanel(props: BasePanelProps): JSX.Element | null {
 
 	const handleLightDismiss = useCallback(
 		(e: ReactMouseEvent<HTMLDivElement>): void => {
-			if (e.target === e.currentTarget && isTopRef.current === true) {
+			if (e.target === e.currentTarget && isTopRef.current) {
 				e.preventDefault();
 				e.stopPropagation();
 				safeClose();
@@ -114,7 +114,7 @@ export function BasePanel(props: BasePanelProps): JSX.Element | null {
 		[safeClose]
 	);
 
-	if (isOpen === false) {
+	if (!isOpen) {
 		return null;
 	}
 

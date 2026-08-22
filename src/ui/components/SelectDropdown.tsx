@@ -1,10 +1,11 @@
-import { Suspense, type JSX } from "react";
+import { Suspense } from "react";
 import { clsx } from "clsx";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 
 import { Icon } from "@/ui/components/Icon";
 import { lazyWithPreload } from "@/utils/lazyWithPreload";
 
+import type { JSX } from "react";
 import type { SelectDropdownContentProps } from "@/ui/components/SelectDropdownContent";
 
 export interface SelectDropdownOption<T extends string> {
@@ -33,7 +34,7 @@ export function SelectDropdown<T extends string>(props: SelectDropdownProps<T>):
 	const isDisabled = disabled ?? false;
 
 	const currentOption = options.find((opt): boolean => opt.value === value);
-	const displayValue = currentOption !== undefined ? currentOption.label : String(value);
+	const displayValue = currentOption !== undefined ? currentOption.label : value;
 
 	return (
 		<DropdownMenu.Root>

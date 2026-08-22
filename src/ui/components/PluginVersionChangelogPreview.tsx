@@ -28,10 +28,10 @@ function renderChangelogContent(
 	content: string,
 	onRetry?: () => void,
 ): JSX.Element {
-	if (isLoading === true && content === "") {
+	if (isLoading && content === "") {
 		return <StateContainer message="Fetching changelog..." type="loading" />;
 	}
-	if (isError === true) {
+	if (isError) {
 		return (
 			<StateContainer
 				message="Failed to fetch changelog for this version."
@@ -71,30 +71,30 @@ export function PluginVersionChangelogPreview(
 
 	const compatibilityService = useService("pluginCompatibilityService");
 	const effectiveVersion = version !== "" ? version : "latest";
-	const isQueryEnabled = isEnabled === true && repoUrl.trim() !== "";
-	const shouldFetchManifest = hideCard === false && isQueryEnabled;
+	const isQueryEnabled = isEnabled && repoUrl.trim() !== "";
+	const shouldFetchManifest = !hideCard && isQueryEnabled;
 
-	const { data: validationCtx, isLoading: isLoadingManifest } = useRemoteManifest(
+	const { data: validationCtx, isLoading: isLoadingManifest } = useRemoteManifest({
 		repoUrl,
-		effectiveVersion,
+		version: effectiveVersion,
 		channel,
 		tokenSecretId,
-		shouldFetchManifest,
-	);
+		isEnabled: shouldFetchManifest,
+	});
 
 	const {
 		data: changelog,
 		isLoading: isLoadingChangelog,
 		isError: isChangelogError,
 		refetch: refetchChangelog,
-	} = usePluginChangelog(
+	} = usePluginChangelog({
 		repoUrl,
-		effectiveVersion,
+		version: effectiveVersion,
 		channel,
 		priority,
 		tokenSecretId,
-		isQueryEnabled,
-	);
+		isEnabled: isQueryEnabled,
+	});
 
 	const manifest = validationCtx?.manifest;
 
@@ -114,7 +114,7 @@ export function PluginVersionChangelogPreview(
 			return false;
 		}
 
-		return overall.isCompatible === false;
+		return !overall.isCompatible;
 	}, [manifest, repoUrl, compatibilityService]);
 
 	const remoteCardData: PluginCardOverrideData = useMemo((): PluginCardOverrideData => {
@@ -128,13 +128,13 @@ export function PluginVersionChangelogPreview(
 			};
 		}
 
-		const fallbackName = repoUrl.includes("/") === true ? (repoUrl.split("/")[1] ?? repoUrl) : repoUrl;
+		const fallbackName = repoUrl.includes("/") ? (repoUrl.split("/")[1] ?? repoUrl) : repoUrl;
 		const displayVersion = effectiveVersion !== "" && effectiveVersion !== "latest" ? effectiveVersion : "Latest";
 
 		return {
 			name: fallbackName,
 			version: displayVersion,
-			description: isLoadingManifest === true ? "Fetching remote plugin manifest..." : "",
+			description: isLoadingManifest ? "Fetching remote plugin manifest..." : "",
 			author: undefined,
 			isIncompatible: false,
 		};
@@ -146,11 +146,11 @@ export function PluginVersionChangelogPreview(
 	}, [refetchChangelog]);
 
 	const effectiveChangelog = changelog ?? "";
-	const isChangelogLoading = isLoadingChangelog === true && effectiveChangelog === "";
+	const isChangelogLoading = isLoadingChangelog && effectiveChangelog === "";
 
 	return (
 		<>
-			{hideCard === false ? (
+			{!hideCard ? (
 				<div className="ce-dashboard-card-wrapper">
 					<CanaryErrorBoundary variant="card">
 						<PluginCard

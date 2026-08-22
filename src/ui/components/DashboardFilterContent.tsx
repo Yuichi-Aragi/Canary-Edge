@@ -22,7 +22,7 @@ export function DashboardFilterContent({
 	const { portalRef } = usePortalContext();
 
 	const filterList: readonly DashboardFilterType[] =
-		hasActiveInstallations === true || activeFilters.has("installing") === true
+		hasActiveInstallations || activeFilters.has("installing")
 			? (["installing", ...BASE_FILTERS] as const)
 			: BASE_FILTERS;
 

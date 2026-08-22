@@ -1,14 +1,18 @@
-import {
-	forwardRef,
-	type JSX,
-	type ButtonHTMLAttributes,
-	type InputHTMLAttributes,
-	type ChangeEvent,
-	type KeyboardEvent as ReactKeyboardEvent,
+import { cva } from "class-variance-authority";
+import { clsx } from "clsx";
+
+import { Icon } from "@/ui/components/Icon";
+
+import type {
+	JSX,
+	Ref,
+	ButtonHTMLAttributes,
+	InputHTMLAttributes,
+	ChangeEvent,
+	KeyboardEvent as ReactKeyboardEvent,
 } from "react";
-import { cva, type VariantProps } from "class-variance-authority";
-import { clsx, type ClassValue } from "clsx";
-import { Icon } from "./Icon";
+import type { VariantProps } from "class-variance-authority";
+import type { ClassValue } from "clsx";
 
 function cn(...inputs: ClassValue[]): string {
 	return clsx(inputs);
@@ -42,42 +46,40 @@ export interface ButtonProps
 		VariantProps<typeof buttonVariants> {
 	readonly text: string;
 	readonly icon?: string | undefined;
+	readonly ref?: Ref<HTMLButtonElement> | undefined;
 }
 
-export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-	(props, ref): JSX.Element => {
-		const { className, variant, size, fullWidth, text, icon, type, onClick, ...restProps } = props;
-		const buttonType = type ?? "button";
-		const buttonClassName = cn(buttonVariants({ variant, size, fullWidth }), className);
-		const iconElement = icon !== undefined ? <Icon className="button-icon" name={icon} /> : null;
+export function Button(props: ButtonProps): JSX.Element {
+	const { ref, className, variant, size, fullWidth, text, icon, type, onClick, ...restProps } = props;
+	const buttonType = type ?? "button";
+	const buttonClassName = cn(buttonVariants({ variant, size, fullWidth }), className);
+	const iconElement = icon !== undefined ? <Icon className="button-icon" name={icon} /> : null;
 
-		if (buttonType === "submit") {
-			return (
-				<button ref={ref} className={buttonClassName} type="submit" onClick={onClick} {...restProps}>
-					{iconElement}
-					{text}
-				</button>
-			);
-		}
-
-		if (buttonType === "reset") {
-			return (
-				<button ref={ref} className={buttonClassName} type="reset" onClick={onClick} {...restProps}>
-					{iconElement}
-					{text}
-				</button>
-			);
-		}
-
+	if (buttonType === "submit") {
 		return (
-			<button ref={ref} className={buttonClassName} type="button" onClick={onClick} {...restProps}>
+			<button ref={ref} className={buttonClassName} type="submit" onClick={onClick} {...restProps}>
 				{iconElement}
 				{text}
 			</button>
 		);
-	},
-);
-Button.displayName = "Button";
+	}
+
+	if (buttonType === "reset") {
+		return (
+			<button ref={ref} className={buttonClassName} type="reset" onClick={onClick} {...restProps}>
+				{iconElement}
+				{text}
+			</button>
+		);
+	}
+
+	return (
+		<button ref={ref} className={buttonClassName} type="button" onClick={onClick} {...restProps}>
+			{iconElement}
+			{text}
+		</button>
+	);
+}
 
 export function Toggle({
 	checked: isChecked,
@@ -113,27 +115,25 @@ export interface SliderProps extends Omit<InputHTMLAttributes<HTMLInputElement>,
 	readonly max: number;
 	readonly step?: number;
 	readonly onChange: (value: number) => void;
+	readonly ref?: Ref<HTMLInputElement> | undefined;
 }
 
-export const Slider = forwardRef<HTMLInputElement, SliderProps>(
-	(props, ref): JSX.Element => {
-		const { className, value, min, max, step, onChange, ...restProps } = props;
-		const inputStep = step ?? 1;
-		return (
-			<input
-				ref={ref}
-				className={cn("slider", className)}
-				max={max}
-				min={min}
-				step={inputStep}
-				type="range"
-				value={value}
-				onChange={(e: ChangeEvent<HTMLInputElement>): void => {
-					onChange(Number(e.target.value));
-				}}
-				{...restProps}
-			/>
-		);
-	},
-);
-Slider.displayName = "Slider";
+export function Slider(props: SliderProps): JSX.Element {
+	const { ref, className, value, min, max, step, onChange, ...restProps } = props;
+	const inputStep = step ?? 1;
+	return (
+		<input
+			ref={ref}
+			className={cn("slider", className)}
+			max={max}
+			min={min}
+			step={inputStep}
+			type="range"
+			value={value}
+			onChange={(e: ChangeEvent<HTMLInputElement>): void => {
+				onChange(Number(e.target.value));
+			}}
+			{...restProps}
+		/>
+	);
+}

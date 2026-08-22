@@ -1,4 +1,4 @@
-import { useMemo, type JSX } from "react";
+import { useMemo } from "react";
 import { v4 as uuidv4 } from "uuid";
 
 import { PluginSettingsView } from "@/ui/views/PluginSettingsView";
@@ -8,6 +8,7 @@ import { BasePanel } from "@/ui/components/BasePanel";
 import { useCanaryState } from "@/ui/hooks/useCanaryStore";
 import { scrubRepositoryUrl } from "@/utils/stringUtils";
 
+import type { JSX } from "react";
 import type { PluginConfig } from "@/domain/types";
 
 export interface PluginSettingsPanelProps {
@@ -55,7 +56,7 @@ export function PluginSettingsPanel({
 			</div>
 
 			<div className="ce-dashboard-card-wrapper mod-settings-panel">
-				{isBusy === true && operation !== undefined ? (
+				{operation?.status === "pending" ? (
 					<div className="ce-settings-box mod-busy-state">
 						<div className="ce-settings-box-row mod-title">
 							Operation in Progress

@@ -63,7 +63,7 @@ export function ChangelogPanel({ request }: ChangelogPanelProps): JSX.Element {
 			const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 			const elements = Array.from(container.children);
 
-			if (prefersReducedMotion === true) {
+			if (prefersReducedMotion) {
 				gsap.set(elements, {
 					opacity: 1,
 					y: 0,
@@ -107,13 +107,13 @@ export function ChangelogPanel({ request }: ChangelogPanelProps): JSX.Element {
 		: undefined;
 	const releaseChannel = pluginConfig?.releaseChannel ?? "stable";
 
-	const { data: validationCtx, isLoading: isLoadingManifest } = useRemoteManifest(
-		repo,
+	const { data: validationCtx, isLoading: isLoadingManifest } = useRemoteManifest({
+		repoUrl: repo,
 		version,
-		releaseChannel,
+		channel: releaseChannel,
 		tokenSecretId,
-		true
-	);
+		isEnabled: true,
+	});
 
 	const manifest = validationCtx?.manifest;
 
@@ -133,7 +133,7 @@ export function ChangelogPanel({ request }: ChangelogPanelProps): JSX.Element {
 			return false;
 		}
 
-		return overall.isCompatible === false;
+		return !overall.isCompatible;
 	}, [manifest, repo, compatibilityService]);
 
 	const remoteCardData: PluginCardOverrideData = useMemo((): PluginCardOverrideData => {
@@ -156,48 +156,48 @@ export function ChangelogPanel({ request }: ChangelogPanelProps): JSX.Element {
 	}, [manifest, repo, version, isLoadingManifest, isIncompatible]);
 
 	const handleConfirm = useCallback((): void => {
-		if (isProcessingRef.current === true) {
+		if (isProcessingRef.current) {
 			return;
 		}
 		isProcessingRef.current = true;
 		const resolveRes = safe.try((): void => {
 			request.resolve(true);
 		});
-		if (resolveRes.ok === false) {
+		if (!resolveRes.ok) {
 			console.error("Failed to resolve changelog confirmation request:", resolveRes.error);
 		}
 		dismissChangelogById(request.id);
 	}, [request, dismissChangelogById]);
 
 	const handleCancel = useCallback((): void => {
-		if (isProcessingRef.current === true) {
+		if (isProcessingRef.current) {
 			return;
 		}
 		isProcessingRef.current = true;
 		const resolveRes = safe.try((): void => {
 			request.resolve(false);
 		});
-		if (resolveRes.ok === false) {
+		if (!resolveRes.ok) {
 			console.error("Failed to resolve changelog cancellation request:", resolveRes.error);
 		}
 		dismissChangelogById(request.id);
 	}, [request, dismissChangelogById]);
 
 	const handleClose = useCallback((): void => {
-		if (isProcessingRef.current === true) {
+		if (isProcessingRef.current) {
 			return;
 		}
 		isProcessingRef.current = true;
 		const resolveRes = safe.try((): void => {
 			request.resolve(true);
 		});
-		if (resolveRes.ok === false) {
+		if (!resolveRes.ok) {
 			console.error("Failed to resolve changelog dismissal request:", resolveRes.error);
 		}
 		dismissChangelogById(request.id);
 	}, [request, dismissChangelogById]);
 
-	const handlePanelClose = isConfirmationRequired === true ? handleCancel : handleClose;
+	const handlePanelClose = isConfirmationRequired ? handleCancel : handleClose;
 	const noopSettings = useCallback((): void => {}, []);
 
 	return (
@@ -255,7 +255,7 @@ export function ChangelogPanel({ request }: ChangelogPanelProps): JSX.Element {
 					</div>
 				</div>
 
-				{isConfirmationRequired === true ? (
+				{isConfirmationRequired ? (
 					<div className="ce-dashboard-card-wrapper mod-settings-panel">
 						<div className="ce-changelog-actions-card">
 							<div className="ce-changelog-actions-buttons">

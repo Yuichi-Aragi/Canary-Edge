@@ -1,17 +1,11 @@
-import {
-	useRef,
-	useEffect,
-	useCallback,
-	Suspense,
-	type JSX,
-	type RefObject,
-} from "react";
+import { useRef, useEffect, useCallback, Suspense } from "react";
 
 import { SelectorTriggerButton } from "@/ui/components/CommandPaletteShared";
 import { useVersionSelectorViewModel } from "@/ui/hooks/useVersionSelectorViewModel";
 import { lazyWithPreload } from "@/utils/lazyWithPreload";
 import { safe } from "@/utils/safe";
 
+import type { JSX, RefObject } from "react";
 import type { VirtuosoHandle } from "react-virtuoso";
 import type { ReleaseVersion, ReleaseChannel } from "@/domain/types";
 import type {
@@ -36,7 +30,9 @@ const LazyVersionSelectorModal = lazyWithPreload<VersionSelectorModalProps>(asyn
 	return { default: mod.VersionSelectorModal };
 });
 
-interface VersionSelectorViewProps extends Omit<VersionSelectorProps, "versions" | "onChange"> {
+interface VersionSelectorViewProps {
+	readonly value: string;
+	readonly disabled?: boolean | undefined;
 	readonly state: VersionSelectorViewState;
 	readonly actions: VersionSelectorViewActions;
 	readonly virtuosoRef: RefObject<VirtuosoHandle | null>;
@@ -49,7 +45,7 @@ function VersionSelectorView(props: VersionSelectorViewProps): JSX.Element {
 	const triggerBtnRef = useRef<HTMLButtonElement>(null);
 
 	useEffect((): void => {
-		if (state.isOpen === false) {
+		if (!state.isOpen) {
 			safe.try((): void => {
 				triggerBtnRef.current?.focus();
 			});
@@ -81,7 +77,7 @@ function VersionSelectorView(props: VersionSelectorViewProps): JSX.Element {
 				onClick={actions.openModal}
 			/>
 
-			{state.isOpen === true ? (
+			{state.isOpen ? (
 				<Suspense fallback={null}>
 					<LazyVersionSelectorModal
 						activeIndex={state.activeIndex}
@@ -110,7 +106,7 @@ function VersionSelectorView(props: VersionSelectorViewProps): JSX.Element {
 }
 
 export function VersionSelector(props: VersionSelectorProps): JSX.Element {
-	const { value, versions, onChange, repoUrl, tokenSecretId, channel, onLoadMore, ...rest } = props;
+	const { value, versions, onChange, disabled, repoUrl, tokenSecretId, channel, onLoadMore } = props;
 	const virtuosoRef = useRef<VirtuosoHandle>(null);
 	const vm = useVersionSelectorViewModel({
 		value,
@@ -125,8 +121,8 @@ export function VersionSelector(props: VersionSelectorProps): JSX.Element {
 
 	return (
 		<VersionSelectorView
-			{...rest}
 			actions={vm.actions}
+			disabled={disabled}
 			state={vm.state}
 			value={value}
 			virtuosoRef={virtuosoRef}

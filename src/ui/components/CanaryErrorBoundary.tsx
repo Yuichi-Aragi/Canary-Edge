@@ -1,15 +1,18 @@
-import { useCallback, type ErrorInfo, type PropsWithChildren, type JSX } from "react";
-import { ErrorBoundary, type FallbackProps } from "react-error-boundary";
+import { useCallback } from "react";
+import { ErrorBoundary } from "react-error-boundary";
 import { match } from "ts-pattern";
 
 import { Button } from "@/ui/components/BaseComponents";
 import { Icon } from "@/ui/components/Icon";
 import { safe } from "@/utils/safe";
 
+import type { ErrorInfo, PropsWithChildren, JSX } from "react";
+import type { FallbackProps } from "react-error-boundary";
+
 type ErrorBoundaryVariant = "default" | "card";
 
 interface CanaryErrorBoundaryProps extends PropsWithChildren {
-	readonly variant?: ErrorBoundaryVariant;
+	readonly variant?: ErrorBoundaryVariant | undefined;
 }
 
 function DefaultErrorFallback({ error, resetErrorBoundary }: FallbackProps): JSX.Element {
@@ -58,8 +61,7 @@ export function CanaryErrorBoundary(props: CanaryErrorBoundaryProps): JSX.Elemen
 	const logError = useCallback((error: unknown, info: ErrorInfo): void => {
 		const componentStack = info.componentStack ?? "No stack available";
 		const res = safe.try((): void => {
-			console.error("UI Error Caught by Boundary:", error);
-			console.info(`Component Stack: ${componentStack}`);
+			console.error("UI Error Caught by Boundary:", error, componentStack);
 		});
 		if (!res.ok) {
 			console.error("Failed to log error:", res.error);

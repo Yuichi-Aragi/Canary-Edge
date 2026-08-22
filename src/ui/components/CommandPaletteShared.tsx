@@ -1,12 +1,4 @@
-import {
-	forwardRef,
-	useEffect,
-	useRef,
-	type JSX,
-	type ReactNode,
-	type RefObject,
-	type KeyboardEvent as ReactKeyboardEvent,
-} from "react";
+import { useEffect, useRef } from "react";
 import { Command } from "cmdk";
 import { clsx } from "clsx";
 
@@ -15,7 +7,16 @@ import { Icon } from "@/ui/components/Icon";
 import { CommandInstructionBar } from "@/ui/components/CommandInstructionBar";
 import { safe } from "@/utils/safe";
 
+import type {
+	JSX,
+	ReactNode,
+	Ref,
+	RefObject,
+	KeyboardEvent as ReactKeyboardEvent,
+} from "react";
+
 export interface CommandPaletteHeaderInputProps {
+	readonly ref?: Ref<HTMLInputElement> | undefined;
 	readonly value: string;
 	readonly placeholder: string;
 	readonly onValueChange: (value: string) => void;
@@ -25,53 +26,51 @@ export interface CommandPaletteHeaderInputProps {
 	readonly clearIconName?: string | undefined;
 }
 
-export const CommandPaletteHeaderInput = forwardRef<HTMLInputElement, CommandPaletteHeaderInputProps>(
-	(props, ref): JSX.Element => {
-		const {
-			value,
-			placeholder,
-			onValueChange,
-			onKeyDown,
-			onClearAction,
-			clearAriaLabel,
-			clearIconName,
-		} = props;
+export function CommandPaletteHeaderInput(props: CommandPaletteHeaderInputProps): JSX.Element {
+	const {
+		ref,
+		value,
+		placeholder,
+		onValueChange,
+		onKeyDown,
+		onClearAction,
+		clearAriaLabel,
+		clearIconName,
+	} = props;
 
-		const finalClearIconName = clearIconName ?? "x";
+	const finalClearIconName = clearIconName ?? "x";
 
-		return (
-			<div className="ce-command-palette-input-wrapper">
-				<Icon className="ce-command-palette-icon" name="search" />
-				<Command.Input
-					ref={ref}
-					asChild
-					value={value}
-					onKeyDown={onKeyDown}
-					onValueChange={onValueChange}
-				>
-					<input
-						autoCapitalize="none"
-						autoComplete="off"
-						autoCorrect="off"
-						className="ce-command-palette-input"
-						placeholder={placeholder}
-						spellCheck={false}
-						type="text"
-					/>
-				</Command.Input>
-				<button
-					aria-label={clearAriaLabel}
-					className="ce-command-palette-clear-btn"
-					type="button"
-					onClick={onClearAction}
-				>
-					<Icon className="ce-command-palette-clear-icon" name={finalClearIconName} />
-				</button>
-			</div>
-		);
-	},
-);
-CommandPaletteHeaderInput.displayName = "CommandPaletteHeaderInput";
+	return (
+		<div className="ce-command-palette-input-wrapper">
+			<Icon className="ce-command-palette-icon" name="search" />
+			<Command.Input
+				ref={ref}
+				asChild
+				value={value}
+				onKeyDown={onKeyDown}
+				onValueChange={onValueChange}
+			>
+				<input
+					autoCapitalize="none"
+					autoComplete="off"
+					autoCorrect="off"
+					className="ce-command-palette-input"
+					placeholder={placeholder}
+					spellCheck={false}
+					type="text"
+				/>
+			</Command.Input>
+			<button
+				aria-label={clearAriaLabel}
+				className="ce-command-palette-clear-btn"
+				type="button"
+				onClick={onClearAction}
+			>
+				<Icon className="ce-command-palette-clear-icon" name={finalClearIconName} />
+			</button>
+		</div>
+	);
+}
 
 export interface CommandPaletteEmptyProps {
 	readonly title: string;
@@ -88,6 +87,7 @@ export function CommandPaletteEmpty({ title, height }: CommandPaletteEmptyProps)
 }
 
 export interface SelectorTriggerButtonProps {
+	readonly ref?: Ref<HTMLButtonElement> | undefined;
 	readonly label: string;
 	readonly ariaLabel: string;
 	readonly disabled?: boolean | undefined;
@@ -97,46 +97,44 @@ export interface SelectorTriggerButtonProps {
 	readonly chevronClassName?: string | undefined;
 }
 
-export const SelectorTriggerButton = forwardRef<HTMLButtonElement, SelectorTriggerButtonProps>(
-	(props, ref): JSX.Element => {
-		const {
-			label,
-			ariaLabel,
-			disabled,
-			onClick,
-			className,
-			nameClassName,
-			chevronClassName,
-		} = props;
+export function SelectorTriggerButton(props: SelectorTriggerButtonProps): JSX.Element {
+	const {
+		ref,
+		label,
+		ariaLabel,
+		disabled,
+		onClick,
+		className,
+		nameClassName,
+		chevronClassName,
+	} = props;
 
-		const isDisabled = disabled ?? false;
-		const finalClassName = className ?? "ce-version-card";
-		const finalNameClassName = nameClassName ?? "ce-version-name";
-		const finalChevronClassName = chevronClassName ?? "ce-version-chevron";
+	const isDisabled = disabled ?? false;
+	const finalClassName = className ?? "ce-version-card";
+	const finalNameClassName = nameClassName ?? "ce-version-name";
+	const finalChevronClassName = chevronClassName ?? "ce-version-chevron";
 
-		return (
-			<button
-				ref={ref}
-				aria-label={ariaLabel}
-				className={clsx(finalClassName)}
-				disabled={isDisabled}
-				type="button"
-				onClick={onClick}
-			>
-				<span className={clsx(finalNameClassName)}>{label}</span>
-				<Icon className={clsx(finalChevronClassName)} name="more-vertical" />
-			</button>
-		);
-	},
-);
-SelectorTriggerButton.displayName = "SelectorTriggerButton";
+	return (
+		<button
+			ref={ref}
+			aria-label={ariaLabel}
+			className={clsx(finalClassName)}
+			disabled={isDisabled}
+			type="button"
+			onClick={onClick}
+		>
+			<span className={clsx(finalNameClassName)}>{label}</span>
+			<Icon className={clsx(finalChevronClassName)} name="more-vertical" />
+		</button>
+	);
+}
 
 export function useModalFocusOnOpen(
 	isOpen: boolean,
 	inputRef: RefObject<HTMLInputElement | null>,
 ): void {
 	useEffect((): void => {
-		if (isOpen === true) {
+		if (isOpen) {
 			window.requestAnimationFrame((): void => {
 				safe.try((): void => {
 					inputRef.current?.focus();
@@ -194,7 +192,7 @@ export function VirtualizedCommandModal(props: VirtualizedCommandModalProps): JS
 
 	useModalFocusOnOpen(isOpen, targetInputRef);
 
-	if (isOpen === false) {
+	if (!isOpen) {
 		return null;
 	}
 

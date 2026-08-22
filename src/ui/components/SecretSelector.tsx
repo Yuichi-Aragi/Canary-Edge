@@ -1,10 +1,11 @@
-import { useRef, useCallback, Suspense, type JSX, type RefObject } from "react";
+import { useRef, useCallback, Suspense } from "react";
 import { clsx } from "clsx";
 
 import { SelectorTriggerButton } from "@/ui/components/CommandPaletteShared";
 import { useSecretSelectorViewModel } from "@/ui/hooks/useSecretSelectorViewModel";
 import { lazyWithPreload } from "@/utils/lazyWithPreload";
 
+import type { JSX, RefObject } from "react";
 import type { VirtuosoHandle } from "react-virtuoso";
 import type {
 	SecretSelectorViewState,
@@ -19,7 +20,6 @@ export interface SecretSelectorProps {
 	readonly disabled?: boolean | undefined;
 	readonly isValidating?: boolean | undefined;
 	readonly compact?: boolean | undefined;
-	readonly align?: "start" | "center" | "end" | undefined;
 }
 
 const LazySecretSelectorModal = lazyWithPreload<SecretSelectorModalProps>(async () => {
@@ -27,7 +27,11 @@ const LazySecretSelectorModal = lazyWithPreload<SecretSelectorModalProps>(async 
 	return { default: mod.SecretSelectorModal };
 });
 
-interface SecretSelectorViewProps extends Omit<SecretSelectorProps, "options" | "onChange"> {
+interface SecretSelectorViewProps {
+	readonly value: string;
+	readonly disabled?: boolean | undefined;
+	readonly isValidating?: boolean | undefined;
+	readonly compact?: boolean | undefined;
 	readonly state: SecretSelectorViewState;
 	readonly actions: SecretSelectorViewActions;
 	readonly virtuosoRef: RefObject<VirtuosoHandle | null>;
@@ -64,10 +68,10 @@ function SecretSelectorView(props: SecretSelectorViewProps): JSX.Element {
 		}
 	}, [state.searchQuery, actions]);
 
-	const displayLabel = checkingValidity === true ? "Validating..." : state.displayValue;
+	const displayLabel = checkingValidity ? "Validating..." : state.displayValue;
 
 	return (
-		<div className={clsx("ce-pat-container", isCompact === true ? "mod-compact" : "")}>
+		<div className={clsx("ce-pat-container", isCompact ? "mod-compact" : "")}>
 			<SelectorTriggerButton
 				ariaLabel="Select GitHub PAT Secret"
 				chevronClassName="ce-secret-chevron"
@@ -78,7 +82,7 @@ function SecretSelectorView(props: SecretSelectorViewProps): JSX.Element {
 				onClick={actions.openModal}
 			/>
 
-			{state.isOpen === true ? (
+			{state.isOpen ? (
 				<Suspense fallback={null}>
 					<LazySecretSelectorModal
 						activeIndex={state.activeIndex}
@@ -105,7 +109,7 @@ function SecretSelectorView(props: SecretSelectorViewProps): JSX.Element {
 }
 
 export function SecretSelector(props: SecretSelectorProps): JSX.Element {
-	const { value, options, onChange, ...rest } = props;
+	const { value, options, onChange, disabled, isValidating, compact } = props;
 	const virtuosoRef = useRef<VirtuosoHandle>(null);
 	const vm = useSecretSelectorViewModel({
 		value,
@@ -116,8 +120,10 @@ export function SecretSelector(props: SecretSelectorProps): JSX.Element {
 
 	return (
 		<SecretSelectorView
-			{...rest}
 			actions={vm.actions}
+			compact={compact}
+			disabled={disabled}
+			isValidating={isValidating}
 			state={vm.state}
 			value={value}
 			virtuosoRef={virtuosoRef}

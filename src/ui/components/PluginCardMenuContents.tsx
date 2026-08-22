@@ -34,7 +34,7 @@ export function TitleMenuContent({
 				sideOffset={4}
 				{...(portalRef !== null ? { collisionBoundary: portalRef } : {})}
 			>
-				{isUntracked === true ? (
+				{isUntracked ? (
 					<DropdownMenu.Item className="ce-dropdown-item" onSelect={onRegisterUntracked}>
 						<Icon name="plus" />
 						<span>Register and track this plugin</span>

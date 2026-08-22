@@ -35,10 +35,10 @@ const SecretSelectorItem = memo(
 		onSelect,
 	}: SecretSelectorItemProps): JSX.Element => {
 		const isNone = opt === "";
-		const label = isNone === true ? "None" : opt;
+		const label = isNone ? "None" : opt;
 		const description =
-			isNone === true ? "Do not use a secret" : "GitHub Personal Access Token";
-		const iconName = isNone === true ? "shield-off" : "key";
+			isNone ? "Do not use a secret" : "GitHub Personal Access Token";
+		const iconName = isNone ? "shield-off" : "key";
 
 		const handleMouseEnter = useCallback((): void => {
 			onMouseEnter(index);
@@ -48,15 +48,15 @@ const SecretSelectorItem = memo(
 			onSelect(opt);
 		}, [onSelect, opt]);
 
-		const itemValue = (isNone === true ? "none" : opt).toLowerCase();
+		const itemValue = (isNone ? "none" : opt).toLowerCase();
 
 		return (
 			<Command.Item
-				key={isNone === true ? "none" : opt}
+				key={isNone ? "none" : opt}
 				aria-selected={isSelected}
 				className={clsx(
 					"ce-command-palette-item",
-					isSelected === true ? "is-selected" : "",
+					isSelected ? "is-selected" : "",
 				)}
 				role="option"
 				value={itemValue}
@@ -68,7 +68,7 @@ const SecretSelectorItem = memo(
 					<span className="ce-item-title">{label}</span>
 					<span className="ce-item-description">{description}</span>
 				</div>
-				{isCurrentValue === true ? (
+				{isCurrentValue ? (
 					<Icon className="ce-command-palette-check-icon" name="check" />
 				) : null}
 			</Command.Item>

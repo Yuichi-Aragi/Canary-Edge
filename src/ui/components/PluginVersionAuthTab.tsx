@@ -1,9 +1,10 @@
-import { Suspense, type JSX } from "react";
+import { Suspense } from "react";
 
 import { Button } from "@/ui/components/BaseComponents";
 import { SettingsBox } from "@/ui/components/SettingsBox";
 import { lazyWithPreload } from "@/utils/lazyWithPreload";
 
+import type { JSX } from "react";
 import type { ReleaseChannel, ReleaseVersion } from "@/domain/types";
 import type { SecretSelectorProps } from "@/ui/components/SecretSelector";
 import type { VersionSelectorProps } from "@/ui/components/VersionSelector";
@@ -57,7 +58,6 @@ export function PluginVersionAuthTab({
 				control={
 					<Suspense fallback={<div className="ce-version-card is-loading"><span className="ce-version-name">Loading...</span></div>}>
 						<LazySecretSelector
-							align="end"
 							compact
 							disabled={isBusy}
 							isValidating={isValidatingToken}
@@ -80,7 +80,7 @@ export function PluginVersionAuthTab({
 						<Suspense fallback={<div className="ce-version-card is-loading"><span className="ce-version-name">Loading...</span></div>}>
 							<LazyVersionSelector
 								channel={channel}
-								disabled={isBusy === true || isVersionsSuccess === false}
+								disabled={isBusy || !isVersionsSuccess}
 								repoUrl={repoUrl}
 								tokenSecretId={tokenSecretId}
 								value={selectedVersion}
@@ -89,7 +89,7 @@ export function PluginVersionAuthTab({
 							/>
 						</Suspense>
 						<Button
-							disabled={isBusy === true || isVersionsSuccess === false}
+							disabled={isBusy || !isVersionsSuccess}
 							text={installButtonText}
 							variant="cta"
 							onClick={handleInstallVersion}
@@ -99,7 +99,7 @@ export function PluginVersionAuthTab({
 				description={`Current version: ${currentVersion}. Select a version to install or fallback to latest.`}
 				icon="git-branch"
 				iconVariant="blue"
-				isDisabled={isBusy === true || isVersionsSuccess === false}
+				isDisabled={isBusy || !isVersionsSuccess}
 				title="Plugin Version"
 			/>
 		</>

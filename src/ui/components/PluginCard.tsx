@@ -103,7 +103,7 @@ const PluginCardView = memo((props: PluginCardViewProps): JSX.Element => {
 	});
 
 	const handlePreloadMenus = useCallback((): void => {
-		if (state.isUntracked === true) {
+		if (state.isUntracked) {
 			return;
 		}
 		void LazyTitleMenuContent.preload();
@@ -113,7 +113,7 @@ const PluginCardView = memo((props: PluginCardViewProps): JSX.Element => {
 
 	const handleTitleOpenChange = useCallback(
 		(nextOpen: boolean): void => {
-			if (state.isUntracked === true || (nextOpen === true && (isScrollActive === true || state.isBusy === true))) {
+			if (state.isUntracked || (nextOpen && (isScrollActive || state.isBusy))) {
 				return;
 			}
 			rawHandleTitleOpenChange(nextOpen);
@@ -123,7 +123,7 @@ const PluginCardView = memo((props: PluginCardViewProps): JSX.Element => {
 
 	const handleUpdateOpenChange = useCallback(
 		(nextOpen: boolean): void => {
-			if (state.isUntracked === true || (nextOpen === true && (isScrollActive === true || state.isBusy === true))) {
+			if (state.isUntracked || (nextOpen && (isScrollActive || state.isBusy))) {
 				return;
 			}
 			rawHandleUpdateOpenChange(nextOpen);
@@ -133,7 +133,7 @@ const PluginCardView = memo((props: PluginCardViewProps): JSX.Element => {
 
 	const handleBellOpenChange = useCallback(
 		(nextOpen: boolean): void => {
-			if (state.isUntracked === true || (nextOpen === true && (isScrollActive === true || state.isBusy === true))) {
+			if (state.isUntracked || (nextOpen && (isScrollActive || state.isBusy))) {
 				return;
 			}
 			rawHandleBellOpenChange(nextOpen);
@@ -143,7 +143,7 @@ const PluginCardView = memo((props: PluginCardViewProps): JSX.Element => {
 
 	const handleTitleLongPress = useCallback(
 		(e: ReactPointerEvent<HTMLElement>): void => {
-			if (state.isUntracked === true || isScrollActive === true || state.isBusy === true) {
+			if (state.isUntracked || isScrollActive || state.isBusy) {
 				return;
 			}
 			e.preventDefault();
@@ -156,7 +156,7 @@ const PluginCardView = memo((props: PluginCardViewProps): JSX.Element => {
 
 	const handleTitleContextMenu = useCallback(
 		(e: ReactMouseEvent<HTMLElement>): void => {
-			if (state.isUntracked === true || isScrollActive === true || state.isBusy === true) {
+			if (state.isUntracked || isScrollActive || state.isBusy) {
 				return;
 			}
 			e.preventDefault();
@@ -174,7 +174,7 @@ const PluginCardView = memo((props: PluginCardViewProps): JSX.Element => {
 
 	const handleTitlePointerDown = useCallback(
 		(e: ReactPointerEvent<HTMLElement>): void => {
-			if (state.isUntracked === true || isScrollActive === true || state.isBusy === true) {
+			if (state.isUntracked || isScrollActive || state.isBusy) {
 				return;
 			}
 			void LazyTitleMenuContent.preload();
@@ -216,7 +216,7 @@ const PluginCardView = memo((props: PluginCardViewProps): JSX.Element => {
 
 	const handleSettingsLongPress = useCallback(
 		(e: ReactPointerEvent<HTMLElement>): void => {
-			if (isScrollActive === true || state.isBusy === true) {
+			if (isScrollActive || state.isBusy) {
 				return;
 			}
 			e.preventDefault();
@@ -226,7 +226,7 @@ const PluginCardView = memo((props: PluginCardViewProps): JSX.Element => {
 	);
 
 	const handleSettingsClick = useCallback((): void => {
-		if (isScrollActive === true || state.isBusy === true) {
+		if (isScrollActive || state.isBusy) {
 			return;
 		}
 		actions.handleSettingsClick();
@@ -238,7 +238,7 @@ const PluginCardView = memo((props: PluginCardViewProps): JSX.Element => {
 		onClick: handleSettingsClick,
 	});
 
-	if (state.isLoading === true) {
+	if (state.isLoading) {
 		return (
 			<div className="ce-dashboard-card mod-state-card">
 				<StateContainer
@@ -250,7 +250,7 @@ const PluginCardView = memo((props: PluginCardViewProps): JSX.Element => {
 		);
 	}
 
-	if (state.isError === true) {
+	if (state.isError) {
 		return (
 			<div className="ce-dashboard-card mod-state-card">
 				<StateContainer
@@ -268,7 +268,7 @@ const PluginCardView = memo((props: PluginCardViewProps): JSX.Element => {
 		<div className="ce-dashboard-card" onPointerEnter={handlePreloadMenus}>
 			<div className="ce-card-header">
 				<div className="ce-card-title">
-					{state.isUntracked === true ? (
+					{state.isUntracked ? (
 						<span className="ce-card-title-untracked" title="Untracked local plugin">
 							{state.pluginDisplayName}
 						</span>
@@ -297,7 +297,7 @@ const PluginCardView = memo((props: PluginCardViewProps): JSX.Element => {
 									{state.pluginDisplayName}
 								</a>
 							</DropdownMenuTrigger>
-							{isTitleMenuOpen === true ? (
+							{isTitleMenuOpen ? (
 								<Suspense fallback={null}>
 									<LazyTitleMenuContent
 										isUntracked={false}
@@ -316,7 +316,7 @@ const PluginCardView = memo((props: PluginCardViewProps): JSX.Element => {
 					<span className={tagVariants({ isFrozen: state.isFrozen })}>
 						{state.manifestVersion}
 					</span>
-					{state.isIncompatible === true ? (
+					{state.isIncompatible ? (
 						<span className="ce-tag mod-error">Incompatible</span>
 					) : null}
 					{state.installStatus === "error" ? (
@@ -337,10 +337,10 @@ const PluginCardView = memo((props: PluginCardViewProps): JSX.Element => {
 				) : null}
 			</div>
 
-			{shouldHideActions === false ? (
+			{!shouldHideActions ? (
 				<div className="ce-card-footer">
 					<div className="ce-card-footer-left">
-						{state.isUntracked === true
+						{state.isUntracked
 							? null
 							: match({
 									isInstalling: state.isInstalling,
@@ -389,7 +389,7 @@ const PluginCardView = memo((props: PluginCardViewProps): JSX.Element => {
 												>
 													<Button
 														className="ce-icon-button"
-														disabled={state.isBusy === true || isScrollActive === true}
+														disabled={state.isBusy || isScrollActive}
 														icon="bell"
 														text=""
 														title={`Detected Updates (${String(state.detectedUpdates.length)})`}
@@ -399,7 +399,7 @@ const PluginCardView = memo((props: PluginCardViewProps): JSX.Element => {
 													</span>
 												</div>
 											</DropdownMenuTrigger>
-											{isBellMenuOpen === true ? (
+											{isBellMenuOpen ? (
 												<Suspense fallback={null}>
 													<LazyBellMenuContent
 														detectedUpdates={state.detectedUpdates}
@@ -420,7 +420,7 @@ const PluginCardView = memo((props: PluginCardViewProps): JSX.Element => {
 							.with({ isUntracked: true }, (): JSX.Element => (
 								<Button
 									className="ce-icon-button"
-									disabled={state.isBusy === true || isScrollActive === true}
+									disabled={state.isBusy || isScrollActive}
 									icon="plus"
 									text=""
 									title="Register and Track"
@@ -431,7 +431,7 @@ const PluginCardView = memo((props: PluginCardViewProps): JSX.Element => {
 								<>
 									<Button
 										className="ce-icon-button"
-										disabled={isScrollActive === true}
+										disabled={isScrollActive}
 										icon="x"
 										text=""
 										title="Stop Installation"
@@ -440,7 +440,7 @@ const PluginCardView = memo((props: PluginCardViewProps): JSX.Element => {
 									/>
 									<Button
 										className="ce-icon-button"
-										disabled={isScrollActive === true}
+										disabled={isScrollActive}
 										icon="trash"
 										text=""
 										title="Discard Installation"
@@ -453,7 +453,7 @@ const PluginCardView = memo((props: PluginCardViewProps): JSX.Element => {
 								<>
 									<Button
 										className="ce-icon-button"
-										disabled={isScrollActive === true}
+										disabled={isScrollActive}
 										icon="refresh-cw"
 										text=""
 										title="Retry Installation"
@@ -461,7 +461,7 @@ const PluginCardView = memo((props: PluginCardViewProps): JSX.Element => {
 									/>
 									<Button
 										className="ce-icon-button"
-										disabled={isScrollActive === true}
+										disabled={isScrollActive}
 										icon="trash"
 										text=""
 										title="Discard Installation"
@@ -473,7 +473,7 @@ const PluginCardView = memo((props: PluginCardViewProps): JSX.Element => {
 							.with({ isInstalling: false, hasActiveOperation: true }, (): JSX.Element => (
 								<Button
 									className="ce-icon-button"
-									disabled={isScrollActive === true}
+									disabled={isScrollActive}
 									icon="x"
 									text=""
 									title="Cancel Operation"
@@ -483,12 +483,12 @@ const PluginCardView = memo((props: PluginCardViewProps): JSX.Element => {
 							))
 							.otherwise((): JSX.Element => (
 								<>
-									{state.isFrozen === false ? (
+									{!state.isFrozen ? (
 										<DropdownMenuRoot open={isUpdateMenuOpen} onOpenChange={handleUpdateOpenChange}>
 											<DropdownMenuTrigger asChild>
 												<Button
 													className="ce-icon-button"
-													disabled={state.isBusy === true || isScrollActive === true}
+													disabled={state.isBusy || isScrollActive}
 													icon="sync"
 													text=""
 													title="Update Options"
@@ -496,7 +496,7 @@ const PluginCardView = memo((props: PluginCardViewProps): JSX.Element => {
 														void LazyUpdateMenuContent.preload();
 													}}
 													onPointerDown={(e: ReactPointerEvent<HTMLButtonElement>): void => {
-														if (isScrollActive === true || state.isBusy === true) {
+														if (isScrollActive || state.isBusy) {
 															e.preventDefault();
 														}
 														void LazyUpdateMenuContent.preload();
@@ -506,7 +506,7 @@ const PluginCardView = memo((props: PluginCardViewProps): JSX.Element => {
 													}}
 												/>
 											</DropdownMenuTrigger>
-											{isUpdateMenuOpen === true ? (
+											{isUpdateMenuOpen ? (
 												<Suspense fallback={null}>
 													<LazyUpdateMenuContent
 														onTriggerCheckUpdate={handleTriggerCheckUpdate}
@@ -518,7 +518,7 @@ const PluginCardView = memo((props: PluginCardViewProps): JSX.Element => {
 									) : null}
 									<Button
 										className="ce-icon-button"
-										disabled={state.isBusy === true || isScrollActive === true}
+										disabled={state.isBusy || isScrollActive}
 										icon="settings"
 										text=""
 										title="Plugin Settings (Hold to Reset)"
@@ -526,7 +526,7 @@ const PluginCardView = memo((props: PluginCardViewProps): JSX.Element => {
 									/>
 									<Button
 										className="ce-icon-button"
-										disabled={state.isBusy === true || isScrollActive === true}
+										disabled={state.isBusy || isScrollActive}
 										icon="trash"
 										text=""
 										title="Unregister Plugin"

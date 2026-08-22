@@ -23,7 +23,7 @@ export function ConfirmPanel({ request }: ConfirmPanelProps): JSX.Element {
 	});
 
 	const handleConfirm = useCallback((): void => {
-		if (isProcessingRef.current === true) {
+		if (isProcessingRef.current) {
 			return;
 		}
 		isProcessingRef.current = true;
@@ -36,7 +36,7 @@ export function ConfirmPanel({ request }: ConfirmPanelProps): JSX.Element {
 	}, [request, dismissConfirmById]);
 
 	const handleCancel = useCallback((): void => {
-		if (isProcessingRef.current === true) {
+		if (isProcessingRef.current) {
 			return;
 		}
 		isProcessingRef.current = true;
