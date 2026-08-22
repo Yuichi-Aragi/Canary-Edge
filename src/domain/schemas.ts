@@ -22,12 +22,12 @@ export function isCanaryEdge(identifier: string, ownManifestId?: string): boolea
 	if (scrubbed === CANARY_EDGE_PLUGIN_ID) {
 		return true;
 	}
-	if (scrubbed.endsWith(`/${CANARY_EDGE_PLUGIN_ID}`) === true) {
+	if (scrubbed.endsWith(`/${CANARY_EDGE_PLUGIN_ID}`)) {
 		return true;
 	}
 	if (ownManifestId !== undefined && ownManifestId !== "") {
 		const ownIdLower = ownManifestId.trim().toLowerCase();
-		if (scrubbed === ownIdLower || scrubbed.endsWith(`/${ownIdLower}`) === true) {
+		if (scrubbed === ownIdLower || scrubbed.endsWith(`/${ownIdLower}`)) {
 			return true;
 		}
 	}
@@ -251,7 +251,7 @@ export const InstallPluginFormSchema = v.pipe(
 	}),
 	v.forward(
 		v.check((input): boolean => {
-			if (input.usePrivateApiKey === true) {
+			if (input.usePrivateApiKey) {
 				const secretId = input.privateApiKeySecretId;
 				return typeof secretId === "string" && secretId.trim().length > 0;
 			}

@@ -81,7 +81,7 @@ export function getFriendlyErrorMessage(error: unknown, context?: string): strin
 							const resetTime = headers["x-ratelimit-reset"];
 							if (resetTime !== undefined && resetTime !== null) {
 								const resetSeconds = Number(resetTime);
-								if (Number.isNaN(resetSeconds) === false) {
+								if (!Number.isNaN(resetSeconds)) {
 									return ERROR_MESSAGES.rateLimit(calculateMinutesToReset(resetSeconds));
 								}
 							}
@@ -98,7 +98,7 @@ export function getFriendlyErrorMessage(error: unknown, context?: string): strin
 			return match(msg)
 				.when(
 					(m): boolean => {
-						return m.includes("timeout") === true;
+						return m.includes("timeout");
 					},
 					(): string => {
 						return ERROR_MESSAGES.TIMEOUT;
@@ -106,7 +106,7 @@ export function getFriendlyErrorMessage(error: unknown, context?: string): strin
 				)
 				.when(
 					(m): boolean => {
-						return m.includes("offline") === true || m.includes("internet") === true;
+						return m.includes("offline") || m.includes("internet");
 					},
 					(): string => {
 						return ERROR_MESSAGES.OFFLINE;
@@ -114,7 +114,7 @@ export function getFriendlyErrorMessage(error: unknown, context?: string): strin
 				)
 				.when(
 					(m): boolean => {
-						return m.includes("addrnotavail") === true || m.includes("eai_again") === true;
+						return m.includes("addrnotavail") || m.includes("eai_again");
 					},
 					(): string => {
 						return ERROR_MESSAGES.DNS_ERROR;

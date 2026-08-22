@@ -164,7 +164,6 @@ export interface PluginConfig {
 }
 
 export interface Settings {
-	// eslint-disable-next-line obsidianmd/no-global-this
 	readonly global: GlobalConfig;
 	readonly plugins: Record<string, PluginConfig>;
 	readonly version: number;
