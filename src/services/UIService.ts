@@ -24,7 +24,7 @@ export class UIService {
 	public constructor(private readonly deps: Readonly<Cradle>) {}
 
 	public dispose(): void {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			return;
 		}
 		this.disposed = true;
@@ -33,7 +33,7 @@ export class UIService {
 			const resolveRes = safe.try((): void => {
 				record.resolve(false);
 			});
-			if (resolveRes.ok === false) {
+			if (!resolveRes.ok) {
 				console.error("Error clearing pending prompt on dispose:", resolveRes.error);
 			}
 			this.deps.canaryStore.dismissPromptById(id);
@@ -64,7 +64,7 @@ export class UIService {
 					const resolveRes = safe.try((): void => {
 						record.resolve(false);
 					});
-					if (resolveRes.ok === false) {
+					if (!resolveRes.ok) {
 						console.error(`Error clearing pending prompt for ${scrubbed}:`, resolveRes.error);
 					}
 					this.deps.canaryStore.dismissPromptById(id);
@@ -77,7 +77,7 @@ export class UIService {
 	}
 
 	public async confirmOverride(request: Readonly<OverrideRequest>): Promise<Result<boolean>> {
-		return await this.promptConfirmation<OverrideRequest>(
+		return this.promptConfirmation<OverrideRequest>(
 			request,
 			(payload): void => {
 				this.deps.canaryStore.requestConfirm(payload);
@@ -87,7 +87,7 @@ export class UIService {
 	}
 
 	public async confirmChangelog(request: Readonly<ChangelogProceedRequest>): Promise<Result<boolean>> {
-		return await this.promptConfirmation<ChangelogProceedRequest>(
+		return this.promptConfirmation<ChangelogProceedRequest>(
 			request,
 			(payload): void => {
 				this.deps.canaryStore.requestChangelog(payload);
@@ -97,7 +97,7 @@ export class UIService {
 	}
 
 	public async displayChangelog(request: Readonly<ChangelogProceedRequest>): Promise<Result<boolean>> {
-		return await this.promptConfirmation<ChangelogProceedRequest>(
+		return this.promptConfirmation<ChangelogProceedRequest>(
 			request,
 			(payload): void => {
 				this.deps.canaryStore.requestChangelog(payload);
@@ -115,7 +115,7 @@ export class UIService {
 		}) => void,
 		abortedErrorMessage: string,
 	): Promise<Result<boolean>> {
-		return await this.safeCtx.async<boolean>(async (_$, defer) => {
+		return this.safeCtx.async<boolean>(async (_$, defer) => {
 			void this.deps.ceWindowManager.open(this.deps.plugin);
 
 			const uniqueId = uuidv4();
@@ -132,7 +132,7 @@ export class UIService {
 				}
 			});
 
-			if (isSignalAborted(signal) === true) {
+			if (isSignalAborted(signal)) {
 				const reason = signal?.reason as unknown;
 				throw reason instanceof Error ? reason : new Error(abortedErrorMessage);
 			}
@@ -141,7 +141,7 @@ export class UIService {
 				this.pendingPrompts.set(uniqueId, { repo: scrubbedRepo, resolve });
 
 				cleanupAbortListener = createAbortListener(signal, (): void => {
-					if (this.pendingPrompts.has(uniqueId) === true) {
+					if (this.pendingPrompts.has(uniqueId)) {
 						this.pendingPrompts.delete(uniqueId);
 						this.deps.canaryStore.dismissPromptById(uniqueId);
 						resolve(false);
@@ -161,7 +161,7 @@ export class UIService {
 				});
 			});
 
-			if (isSignalAborted(signal) === true) {
+			if (isSignalAborted(signal)) {
 				const reason = signal?.reason as unknown;
 				throw reason instanceof Error ? reason : new Error(abortedErrorMessage);
 			}

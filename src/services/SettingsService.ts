@@ -25,6 +25,14 @@ interface WriteRequest {
 	readonly resolve: (res: Result<undefined>) => void;
 }
 
+export interface AddPluginToListOptions {
+	readonly isFrozen: boolean;
+	readonly privateApiKeySecretId?: string | undefined;
+	readonly isIncompatible?: boolean | undefined;
+	readonly overrides?: Readonly<PluginConfigurationOverrides> | undefined;
+	readonly mergeWithExisting?: boolean | undefined;
+}
+
 export class SettingsService {
 	private readonly requestQueue: PQueue = new PQueue({ concurrency: 1 });
 	private readonly safeCtx = safe.bind(this);
@@ -45,21 +53,18 @@ export class SettingsService {
 	}
 
 	public async getSettingsQueued(): Promise<Result<Settings>> {
-		return await this.safeCtx.async<Settings>(async ($) => {
+		return this.safeCtx.async<Settings>(async ($) => {
 			const queuedRes = await this.requestQueue.add((): Result<Settings> => {
 				return this.getSettings();
 			});
-			if (queuedRes === undefined) {
-				throw new Error("Settings request queue returned undefined");
-			}
 			return $(queuedRes);
 		});
 	}
 
 	public async init(): Promise<Result<Settings>> {
-		return await this.safeCtx.async<Settings>(async () => {
+		return this.safeCtx.async<Settings>(async () => {
 			const loadRes = await safe.tryAsync(async (): Promise<unknown> => {
-				return await this.deps.plugin.loadData();
+				return this.deps.plugin.loadData();
 			});
 			const loadedData = safe.unwrapOr(loadRes, null);
 
@@ -69,7 +74,7 @@ export class SettingsService {
 				})
 				.otherwise((data): Settings => {
 					const validation = safeParse(SettingsSchema, data);
-					if (validation.success === true) {
+					if (validation.success) {
 						return {
 							...DEFAULT_SETTINGS_VALUES,
 							...validation.output,
@@ -81,7 +86,7 @@ export class SettingsService {
 								...DEFAULT_SETTINGS_VALUES.plugins,
 								...validation.output.plugins,
 							},
-							version: validation.output.version ?? 0,
+							version: validation.output.version,
 						};
 					}
 					console.error("Settings validation failed, falling back to defaults", validation.issues);
@@ -105,7 +110,7 @@ export class SettingsService {
 		recipe: (draft: Draft<Settings>) => void,
 		expectedVersion: number,
 	): Promise<Result<undefined>> {
-		return await this.safeCtx.async<undefined>(async ($) => {
+		return this.safeCtx.async<undefined>(async ($) => {
 			if (this.pendingWrite !== null) {
 				this.pendingWrite.resolve(safe.err(new Error("Settings write superseded by a subsequent write request")));
 				this.pendingWrite = null;
@@ -116,7 +121,7 @@ export class SettingsService {
 				this.pendingWrite = req;
 
 				void this.requestQueue.add(async (): Promise<void> => {
-					if (this.pendingWrite !== req || this.disposed === true) {
+					if (this.pendingWrite !== req || this.disposed) {
 						return;
 					}
 					this.pendingWrite = null;
@@ -134,16 +139,14 @@ export class SettingsService {
 		recipe: (pluginDraft: Draft<PluginConfig>) => void,
 		expectedVersion: number,
 	): Promise<Result<undefined>> {
-		return await this.safeCtx.async<undefined>(async ($) => {
+		return this.safeCtx.async<undefined>(async ($) => {
 			const sanitizedRepo = this.sanitizeRepo(repo);
 
 			$(
 				await this.updateSettings((draft: Draft<Settings>): void => {
 					draft.plugins[sanitizedRepo] ??= {};
 					const pluginDraft = draft.plugins[sanitizedRepo];
-					if (pluginDraft !== undefined) {
-						recipe(pluginDraft);
-					}
+					recipe(pluginDraft);
 				}, expectedVersion),
 			);
 
@@ -163,7 +166,7 @@ export class SettingsService {
 
 			const newSettings = create(currentSettings, (draft: Draft<Settings>): void => {
 				req.recipe(draft);
-				draft.version = (draft.version ?? 0) + 1;
+				draft.version = draft.version + 1;
 				this.enforceAllPluginsConsistency(draft);
 			});
 
@@ -176,7 +179,7 @@ export class SettingsService {
 			});
 			this.isSavingToDisk = false;
 
-			if (saveRes.ok === false) {
+			if (!saveRes.ok) {
 				console.error("Failed to save settings. Rolling back in-memory state.", saveRes.error);
 				this.deps.plugin.settings = currentSettings;
 				this.deps.canaryStore.setSettings(currentSettings);
@@ -217,7 +220,7 @@ export class SettingsService {
 				hasCustom = true;
 			}
 		}
-		if (hasCustom === false) {
+		if (!hasCustom) {
 			clearSub();
 		}
 	}
@@ -282,7 +285,7 @@ export class SettingsService {
 	}
 
 	public async updateLastUpdateCheck(repositoryPath: string, expectedVersion: number): Promise<Result<undefined>> {
-		return await this.safeCtx.async<undefined>(async ($) => {
+		return this.safeCtx.async<undefined>(async ($) => {
 			$(
 				await this.updatePluginSettings(
 					repositoryPath,
@@ -368,21 +371,17 @@ export class SettingsService {
 
 	public async addPluginToList(
 		repositoryPath: string,
-		isFrozen: boolean,
-		privateApiKeySecretId = "",
-		isIncompatible = false,
-		overrides?: Readonly<PluginConfigurationOverrides>,
-		mergeWithExisting = true,
+		options: Readonly<AddPluginToListOptions>,
 		expectedVersion = 0,
 	): Promise<Result<undefined>> {
-		return await this.upsertPlugin(
+		return this.upsertPlugin(
 			repositoryPath,
 			{
-				isFrozen,
-				privateApiKeySecretId,
-				isIncompatible,
-				overrides,
-				mergeWithExisting,
+				isFrozen: options.isFrozen,
+				privateApiKeySecretId: options.privateApiKeySecretId,
+				isIncompatible: options.isIncompatible,
+				overrides: options.overrides,
+				mergeWithExisting: options.mergeWithExisting,
 			},
 			expectedVersion,
 		);
@@ -400,26 +399,26 @@ export class SettingsService {
 		}>,
 		expectedVersion: number,
 	): Promise<Result<undefined>> {
-		return await this.updatePluginSettings(
+		return this.updatePluginSettings(
 			repositoryPath,
 			(plugin: Draft<PluginConfig>): void => {
 				const existingIsFrozen = plugin.status === "frozen";
 
 				if (options.isFrozen !== undefined) {
-					if (options.preserveFrozenStatus !== true || existingIsFrozen !== true) {
-						plugin.status = options.isFrozen === true ? "frozen" : "active";
+					if (options.preserveFrozenStatus !== true || !existingIsFrozen) {
+						plugin.status = options.isFrozen ? "frozen" : "active";
 					}
 				}
 
 				const merge = options.mergeWithExisting ?? true;
 				const trimmedToken = options.privateApiKeySecretId?.trim() ?? "";
 
-				if (merge === true) {
+				if (merge) {
 					if (trimmedToken !== "") {
 						plugin.tokenSecretId = trimmedToken;
 					}
 					if (options.isIncompatible !== undefined) {
-						plugin.compatibility = options.isIncompatible === true ? "incompatible" : undefined;
+						plugin.compatibility = options.isIncompatible ? "incompatible" : undefined;
 					}
 				} else {
 					plugin.tokenSecretId = trimmedToken !== "" ? trimmedToken : undefined;
@@ -455,7 +454,7 @@ export class SettingsService {
 	}
 
 	public async removePluginFromList(repositoryPath: string, expectedVersion: number): Promise<Result<undefined>> {
-		return await this.safeCtx.async<undefined>(async ($) => {
+		return this.safeCtx.async<undefined>(async ($) => {
 			const sanitizedRepo = this.sanitizeRepo(repositoryPath);
 			$(
 				await this.updateSettings((draft: Draft<Settings>): void => {
@@ -481,7 +480,7 @@ export class SettingsService {
 		return this.safeCtx(($): string => {
 			const settings = $(this.getSettings());
 
-			const globalTokenId = settings.global.tokenSecretId === false ? "" : (settings.global.tokenSecretId ?? "");
+			const globalTokenId = settings.global.tokenSecretId === false ? "" : settings.global.tokenSecretId;
 			const globalToken = resolveToken(this.deps.plugin.app, globalTokenId);
 			const repoToken = resolveToken(this.deps.plugin.app, repoSecretId ?? "");
 
@@ -497,14 +496,14 @@ export class SettingsService {
 
 	private sanitizeRepo(repositoryPath: string, throwOnInvalid = true): string {
 		const sanitized = scrubRepositoryUrl(repositoryPath);
-		if (sanitized === "" && throwOnInvalid === true) {
+		if (sanitized === "" && throwOnInvalid) {
 			throw new Error(`Invalid repository URL: ${repositoryPath}`);
 		}
 		return sanitized;
 	}
 
 	public dispose(): void {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			return;
 		}
 		this.disposed = true;

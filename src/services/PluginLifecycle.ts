@@ -23,9 +23,8 @@ export class PluginLifecycle {
 
 	private async deferIfCanaryEdge(pluginId: string, signal?: AbortSignal): Promise<Result<undefined>> {
 		const ownManifestId = this.deps.plugin.manifest.id;
-		if (isCanaryEdge(pluginId, ownManifestId) === true) {
-			console.info(`[Canary-Edge] [Lifecycle] [${pluginId}] Deferring lifecycle action until concurrent operations complete...`);
-			return await this.deps.concurrencyService.waitForOtherRepoOperations(pluginId, signal);
+		if (isCanaryEdge(pluginId, ownManifestId)) {
+			return this.deps.concurrencyService.waitForOtherRepoOperations(pluginId, signal);
 		}
 		return safe.ok(undefined);
 	}
@@ -37,7 +36,7 @@ export class PluginLifecycle {
 		ctx?: OperationContext | Api | AbortSignal,
 	): Promise<Result<undefined>> {
 		const boundCtx = safe.from(resolveApiContext(ctx)).bind(this);
-		return await boundCtx.async<undefined>(async ($) => {
+		return boundCtx.async<undefined>(async ($) => {
 			$.checkpoint();
 			invariant(pluginId !== "", `Plugin ID is required for ${actionName}`);
 
@@ -48,7 +47,7 @@ export class PluginLifecycle {
 					pluginId,
 					actionName,
 					async (): Promise<Result<undefined>> => {
-						return await safe.tryAsync(async (): Promise<undefined> => {
+						return safe.tryAsync(async (): Promise<undefined> => {
 							const plugins = $(this.getInternalPlugins());
 							$.checkpoint();
 							await actionFn(plugins);
@@ -63,8 +62,7 @@ export class PluginLifecycle {
 	}
 
 	public async reloadPlugin(pluginId: string, ctx?: OperationContext | Api | AbortSignal): Promise<Result<undefined>> {
-		console.info(`[Canary-Edge] [Lifecycle] [${pluginId}] Executing plugin reload...`);
-		return await this.executeLifecycleAction(
+		return this.executeLifecycleAction(
 			pluginId,
 			"reload",
 			async (plugins: InternalPlugins): Promise<void> => {
@@ -79,8 +77,7 @@ export class PluginLifecycle {
 		pluginId: string,
 		ctx?: OperationContext | Api | AbortSignal,
 	): Promise<Result<undefined>> {
-		console.info(`[Canary-Edge] [Lifecycle] [${pluginId}] Enabling plugin and saving configuration...`);
-		return await this.executeLifecycleAction(
+		return this.executeLifecycleAction(
 			pluginId,
 			"enable",
 			async (plugins: InternalPlugins): Promise<void> => {
@@ -96,8 +93,7 @@ export class PluginLifecycle {
 		pluginId: string,
 		ctx?: OperationContext | Api | AbortSignal,
 	): Promise<Result<undefined>> {
-		console.info(`[Canary-Edge] [Lifecycle] [${pluginId}] Disabling plugin and saving configuration...`);
-		return await this.executeLifecycleAction(
+		return this.executeLifecycleAction(
 			pluginId,
 			"disable",
 			async (plugins: InternalPlugins): Promise<void> => {
@@ -109,15 +105,14 @@ export class PluginLifecycle {
 
 	public async loadManifests(ctx?: OperationContext | Api | AbortSignal): Promise<Result<undefined>> {
 		const boundCtx = safe.from(resolveApiContext(ctx)).bind(this);
-		return await boundCtx.async<undefined>(async ($) => {
+		return boundCtx.async<undefined>(async ($) => {
 			$.checkpoint();
-			console.info("[Canary-Edge] [Lifecycle] Reloading all installed plugin manifests...");
 			$(
 				await this.deps.concurrencyService.schedulePlugin(
 					"*",
 					"loadManifests",
 					async (): Promise<Result<undefined>> => {
-						return await safe.tryAsync(async (): Promise<undefined> => {
+						return safe.tryAsync(async (): Promise<undefined> => {
 							const plugins = $(this.getInternalPlugins());
 							$.checkpoint();
 							await plugins.loadManifests();
@@ -132,7 +127,7 @@ export class PluginLifecycle {
 	}
 
 	public dispose(): void {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			return;
 		}
 		this.disposed = true;

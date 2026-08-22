@@ -31,7 +31,7 @@ export class PluginChangelogService {
 	public constructor(private readonly deps: Readonly<Cradle>) {}
 
 	public dispose(): void {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			return;
 		}
 		this.disposed = true;
@@ -41,7 +41,7 @@ export class PluginChangelogService {
 		ctx: OperationContext,
 		options: Readonly<FetchChangelogOptions>,
 	): Promise<Result<string>> {
-		return await ctx.safeCtx.async<string>(async ($) => {
+		return ctx.safeCtx.async<string>(async ($) => {
 			const {
 				repositoryPath,
 				version = "latest",
@@ -50,9 +50,6 @@ export class PluginChangelogService {
 				includePrerelease = true,
 			} = options;
 
-			console.info(
-				`[Canary-Edge] [Changelog] [${repositoryPath}] Fetching changelog (version: '${version}', strategy: '${strategy}', priority: '${priority}')...`,
-			);
 			$(await this.deps.gitHubRepositoryService.checkAccess(repositoryPath, ctx.token, ctx.safeCtx));
 
 			if (strategy === "release_notes") {
@@ -65,28 +62,22 @@ export class PluginChangelogService {
 
 			if (priority === "changelog_file") {
 				const primaryFileRes = await this.fetchChangelogFile(ctx, repositoryPath);
-				if (primaryFileRes.ok === true) {
+				if (primaryFileRes.ok) {
 					return primaryFileRes.value;
 				}
-				console.info(
-					`[Canary-Edge] [Changelog] [${repositoryPath}] Primary changelog file not found, falling back to release notes...`,
-				);
 				const fallbackNotesRes = await this.fetchReleaseNotes(ctx, repositoryPath, version, includePrerelease);
-				if (fallbackNotesRes.ok === true) {
+				if (fallbackNotesRes.ok) {
 					return fallbackNotesRes.value;
 				}
 				throw new Error("Changelog file and release notes not found.");
 			}
 
 			const primaryNotesRes = await this.fetchReleaseNotes(ctx, repositoryPath, version, includePrerelease);
-			if (primaryNotesRes.ok === true) {
+			if (primaryNotesRes.ok) {
 				return primaryNotesRes.value;
 			}
-			console.info(
-				`[Canary-Edge] [Changelog] [${repositoryPath}] Primary release notes not found, falling back to changelog file...`,
-			);
 			const fallbackFileRes = await this.fetchChangelogFile(ctx, repositoryPath);
-			if (fallbackFileRes.ok === true) {
+			if (fallbackFileRes.ok) {
 				return fallbackFileRes.value;
 			}
 			throw new Error("Release notes and changelog file not found.");
@@ -162,14 +153,11 @@ export class PluginChangelogService {
 		ctx: OperationContext,
 		options: Readonly<ChangelogWorkflowOptions>,
 	): Promise<Result<boolean>> {
-		return await ctx.safeCtx.async<boolean>(async ($) => {
+		return ctx.safeCtx.async<boolean>(async ($) => {
 			if (options.showChangelog.mode !== "before") {
 				return true;
 			}
 
-			console.info(
-				`[Canary-Edge] [Changelog] [${ctx.repo}] Prompting changelog before proceeding for version '${options.version}' (priority: '${options.showChangelog.priority}')...`,
-			);
 			const changelog = await this.fetchChangelogWithFallback(ctx, {
 				version: options.version,
 				releaseChannel: options.releaseChannel,
@@ -190,8 +178,7 @@ export class PluginChangelogService {
 				}),
 			);
 
-			if (proceedRes === false) {
-				console.info(`[Canary-Edge] [Changelog] Operation cancelled by user upon viewing changelog for '${ctx.repo}'.`);
+			if (!proceedRes) {
 				return false;
 			}
 
@@ -207,9 +194,6 @@ export class PluginChangelogService {
 			return;
 		}
 
-		console.info(
-			`[Canary-Edge] [Changelog] [${ctx.repo}] Emitting post-operation changelog for version '${options.version}' (priority: '${options.showChangelog.priority}')...`,
-		);
 		const changelog = await this.fetchChangelogWithFallback(ctx, {
 			version: options.version,
 			releaseChannel: options.releaseChannel,
@@ -235,16 +219,15 @@ export class PluginChangelogService {
 		version: string,
 		includePrerelease: boolean,
 	): Promise<Result<string>> {
-		return await ctx.safeCtx.async<string>(async (_$) => {
+		return ctx.safeCtx.async<string>(async (_$) => {
 			const targetVersion = version === "latest" ? "" : version;
-			const releaseResult = await this.deps.gitHubReleaseService.grabReleaseFromRepository(
-				repositoryPath,
-				targetVersion,
-				includePrerelease,
-				ctx.token,
-				ctx.safeCtx,
-			);
-			if (releaseResult.ok === true) {
+			const releaseResult = await this.deps.gitHubReleaseService.grabReleaseFromRepository(repositoryPath, {
+				version: targetVersion,
+				channelOrIncludePrereleases: includePrerelease,
+				token: ctx.token,
+				ctx: ctx.safeCtx,
+			});
+			if (releaseResult.ok) {
 				const release = releaseResult.value;
 				if (release !== null && typeof release.body === "string" && release.body.trim() !== "") {
 					return release.body.trim();
@@ -259,11 +242,11 @@ export class PluginChangelogService {
 		ctx: OperationContext,
 		repositoryPath: string,
 	): Promise<Result<string>> {
-		return await ctx.safeCtx.async<string>(async ($) => {
+		return ctx.safeCtx.async<string>(async ($) => {
 			const fileContent = $(
 				await this.deps.gitHubContentService.fetchChangelogFile(repositoryPath, ctx.token, ctx.safeCtx),
 			);
-			if (fileContent !== undefined && fileContent.trim() !== "") {
+			if (fileContent.trim() !== "") {
 				return fileContent.trim();
 			}
 			throw new Error("Changelog file not found or empty.");

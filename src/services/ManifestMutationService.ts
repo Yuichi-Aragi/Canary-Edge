@@ -17,19 +17,19 @@ export class ManifestMutationService {
 		return this.safeCtx((): PluginManifestEx => {
 			invariant(baseManifest.id !== "", "baseManifest must have an ID");
 
-			if (isIncompatible === false && overrideDesktopOnly === false) {
+			if (!isIncompatible && !overrideDesktopOnly) {
 				return baseManifest;
 			}
 
 			return create(baseManifest, (draft: Draft<PluginManifestEx>): void => {
-				if (isIncompatible === true) {
+				if (isIncompatible) {
 					draft.brat ??= {};
 					draft.brat.isIncompatible = true;
 					draft.brat.minAppVersionOriginal = draft.minAppVersion;
 					draft.minAppVersion = apiVersion;
 				}
 
-				if (overrideDesktopOnly === true) {
+				if (overrideDesktopOnly) {
 					draft.isDesktopOnly = false;
 					draft.brat ??= {};
 					draft.brat.isDesktopOnlyOriginal = true;
@@ -40,7 +40,7 @@ export class ManifestMutationService {
 	}
 
 	public dispose(): void {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			return;
 		}
 		this.disposed = true;

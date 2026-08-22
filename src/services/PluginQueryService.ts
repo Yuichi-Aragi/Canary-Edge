@@ -31,7 +31,7 @@ export class PluginQueryService {
 	public constructor(private readonly deps: Readonly<Cradle>) {}
 
 	public dispose(): void {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			return;
 		}
 		this.disposed = true;
@@ -44,7 +44,7 @@ export class PluginQueryService {
 	}
 
 	public async getPluginIdByRepoOrName(repoOrName: string): Promise<Result<string | undefined>> {
-		return await this.safeCtx.async<string | undefined>(async () => {
+		return this.safeCtx.async<string | undefined>(async () => {
 			const normalized = repoOrName.trim().toLowerCase();
 			if (normalized === "") {
 				return undefined;
@@ -58,16 +58,16 @@ export class PluginQueryService {
 				return cachedPlugin.id;
 			}
 
-			return target.includes("/") === true ? (target.split("/")[1] ?? target) : target;
+			return target.includes("/") ? (target.split("/")[1] ?? target) : target;
 		});
 	}
 
 	public async getPluginIdByRepo(repo: string): Promise<Result<string | undefined>> {
-		return await this.getPluginIdByRepoOrName(repo);
+		return this.getPluginIdByRepoOrName(repo);
 	}
 
 	public async getRepoByPluginId(pluginId: string): Promise<Result<string | undefined>> {
-		return await this.safeCtx.async<string | undefined>(async () => {
+		return this.safeCtx.async<string | undefined>(async () => {
 			const normalizedId = pluginId.trim().toLowerCase();
 			if (normalizedId === "") {
 				return undefined;
@@ -84,7 +84,7 @@ export class PluginQueryService {
 					const repoLower = trackedRepo.toLowerCase().trim();
 					const scrubbedRepo = scrubRepositoryUrl(repoLower).toLowerCase().trim();
 					const repoName =
-						scrubbedRepo.includes("/") === true ? (scrubbedRepo.split("/")[1] ?? scrubbedRepo) : scrubbedRepo;
+						scrubbedRepo.includes("/") ? (scrubbedRepo.split("/")[1] ?? scrubbedRepo) : scrubbedRepo;
 
 					if (repoLower === normalizedId || scrubbedRepo === normalizedId || repoName === normalizedId) {
 						return trackedRepo;
@@ -97,7 +97,7 @@ export class PluginQueryService {
 	}
 
 	public async getBidirectionalMappings(trackedRepos: readonly string[]): Promise<Result<BidirectionalMapping>> {
-		return await this.safeCtx.async<BidirectionalMapping>(async () => {
+		return this.safeCtx.async<BidirectionalMapping>(async () => {
 			const idToRepo = new Map<string, string>();
 			const repoToId = new Map<string, string>();
 
@@ -160,7 +160,7 @@ export class PluginQueryService {
 			const result: PluginListItem[] = [];
 
 			for (const repo in plugins) {
-				if (Object.hasOwn(plugins, repo) === true) {
+				if (Object.hasOwn(plugins, repo)) {
 					const config = plugins[repo];
 					if (config !== undefined && config.status !== "frozen") {
 						result.push({
@@ -216,7 +216,7 @@ export class PluginQueryService {
 			const result: string[] = [];
 
 			for (const repo in plugins) {
-				if (Object.hasOwn(plugins, repo) === true) {
+				if (Object.hasOwn(plugins, repo)) {
 					const config = plugins[repo];
 					if (config?.compatibility === "incompatible") {
 						result.push(repo);
@@ -240,10 +240,10 @@ export class PluginQueryService {
 		ctx?: OperationContext | Api | AbortSignal,
 	): Promise<Result<PluginManifest | null>> {
 		const boundCtx = safe.from(resolveApiContext(ctx)).bind(this);
-		return await boundCtx.async<PluginManifest | null>(async ($) => {
+		return boundCtx.async<PluginManifest | null>(async ($) => {
 			$.checkpoint();
 			const contentRes = await this.deps.pluginInstaller.readLocalManifest(pluginId, boundCtx);
-			if (contentRes.ok === false) {
+			if (!contentRes.ok) {
 				const sysErr = contentRes.error as unknown as { readonly errno?: number; readonly code?: string };
 				if (sysErr.errno === -4058 || sysErr.errno === -2 || sysErr.code === "ENOENT") {
 					return null;
@@ -252,21 +252,21 @@ export class PluginQueryService {
 			}
 
 			const content = contentRes.value;
-			if (content === null || content === undefined || content === "") {
+			if (content === "") {
 				return null;
 			}
 
 			const parseRes = safe.try((): unknown => {
 				return JSON.parse(content);
 			});
-			if (parseRes.ok === false) {
+			if (!parseRes.ok) {
 				console.error(`[Canary-Edge] Failed to parse local manifest JSON for plugin ${pluginId}:`, parseRes.error);
 				return null;
 			}
 
 			const parsedJson: unknown = parseRes.value;
 			const validation = safeParse(PluginManifestSchema, parsedJson);
-			if (validation.success === false) {
+			if (!validation.success) {
 				console.error(`[Canary-Edge] Invalid local manifest schema for plugin ${pluginId}:`, validation.issues);
 				return null;
 			}

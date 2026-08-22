@@ -27,7 +27,7 @@ export class PluginCompatibilityService {
 	public constructor(private readonly deps: Readonly<Cradle>) {}
 
 	public dispose(): void {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			return;
 		}
 		this.disposed = true;
@@ -43,12 +43,12 @@ export class PluginCompatibilityService {
 			
 			const allowIncompatibleMiniVersion = ctx.overrides?.forceInstall?.version ?? config.forceInstall.version;
 
-			if (minAppVersion === "" || allowIncompatibleMiniVersion === true) {
+			if (minAppVersion === "" || allowIncompatibleMiniVersion) {
 				return { isCompatible: true, requiresOverride: false };
 			}
 
 			const isCompatible = requireApiVersion(minAppVersion);
-			if (isCompatible === true) {
+			if (isCompatible) {
 				return { isCompatible: true, requiresOverride: false };
 			}
 
@@ -67,7 +67,7 @@ export class PluginCompatibilityService {
 			
 			const allowIncompatiblePlatform = ctx.overrides?.forceInstall?.platform ?? config.forceInstall.platform;
 
-			if (isMobile === false || isDesktopOnly !== true || allowIncompatiblePlatform === true) {
+			if (!isMobile || isDesktopOnly !== true || allowIncompatiblePlatform) {
 				return { isCompatible: true, requiresOverride: false };
 			}
 
@@ -82,7 +82,7 @@ export class PluginCompatibilityService {
 		return ctx.safeCtx(($) => {
 			const appCompat = $(this.checkAppVersionCompatibility(manifest, ctx));
 			const platformCompat = $(this.checkPlatformCompatibility(manifest, ctx));
-			const isCompatible = appCompat.isCompatible === true && platformCompat.isCompatible === true;
+			const isCompatible = appCompat.isCompatible && platformCompat.isCompatible;
 
 			return {
 				isCompatible,

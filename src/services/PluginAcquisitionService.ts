@@ -45,7 +45,7 @@ export class PluginAcquisitionService {
 	public constructor(private readonly deps: Readonly<Cradle>) {}
 
 	public dispose(): void {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			return;
 		}
 		this.disposed = true;
@@ -55,15 +55,13 @@ export class PluginAcquisitionService {
 		ctx: OperationContext,
 		options: Readonly<ExtendedAcquisitionOptions>,
 	): Promise<Result<PreparedRelease>> {
-		return await ctx.safeCtx.async<PreparedRelease>(async ($) => {
+		return ctx.safeCtx.async<PreparedRelease>(async ($) => {
 			$.checkpoint();
 			const { specifyVersion, context, preResolvedRelease, onPhase } = options;
 
 			if (onPhase !== undefined) {
 				onPhase("resolving");
 			}
-
-			console.info(`[Canary-Edge] [Acquisition] [${ctx.repo}] Resolving release metadata (version: '${specifyVersion !== "" ? specifyVersion : "latest"}')...`);
 
 			let validation: ValidationContext;
 			if (context !== undefined) {
@@ -84,21 +82,18 @@ export class PluginAcquisitionService {
 				onPhase("compatibility");
 			}
 
-			console.info(`[Canary-Edge] [Acquisition] [${ctx.repo}] Validating Obsidian version compatibility...`);
 			let pipelineCtx = $(await this.checkAppCompat(ctx, validation));
 
 			if (onPhase !== undefined) {
 				onPhase("downloading");
 			}
 
-			console.info(`[Canary-Edge] [Acquisition] [${ctx.repo}] Downloading release assets...`);
 			pipelineCtx = $(await this.downloadAssets(ctx, pipelineCtx));
 
 			if (onPhase !== undefined) {
 				onPhase("finalizing");
 			}
 
-			console.info(`[Canary-Edge] [Acquisition] [${ctx.repo}] Validating platform compatibility and manifest...`);
 			pipelineCtx = $(await this.checkPlatformAndFinalizeManifest(ctx, pipelineCtx));
 
 			return $(this.finalizePreparedRelease(ctx, pipelineCtx));
@@ -111,14 +106,14 @@ export class PluginAcquisitionService {
 		request: Readonly<OverrideRequest>,
 		defaultErrorMessage: string,
 	): Promise<Result<boolean>> {
-		return await ctx.safeCtx.async<boolean>(async ($) => {
+		return ctx.safeCtx.async<boolean>(async ($) => {
 			$.checkpoint();
-			if (requiresOverride === false || ctx.onOverrideRequest === undefined) {
+			if (!requiresOverride || ctx.onOverrideRequest === undefined) {
 				throw new Error(defaultErrorMessage);
 			}
 
 			const shouldProceed = $(await ctx.onOverrideRequest(request));
-			if (shouldProceed === false) {
+			if (!shouldProceed) {
 				throw new Error("Compatibility override rejected by user.");
 			}
 
@@ -130,7 +125,7 @@ export class PluginAcquisitionService {
 		ctx: OperationContext,
 		preResolved: Readonly<{ readonly release: import("@/domain/types").Release }>,
 	): Promise<Result<ValidationContext>> {
-		return await ctx.safeCtx.async<ValidationContext>(async ($) => {
+		return ctx.safeCtx.async<ValidationContext>(async ($) => {
 			$.checkpoint();
 			const usingBetaManifest = preResolved.release.prerelease;
 			const res = $(await this.deps.repositoryService.validateRelease(ctx, preResolved.release));
@@ -143,11 +138,11 @@ export class PluginAcquisitionService {
 		ctx: OperationContext,
 		validation: Readonly<ValidationContext>,
 	): Promise<Result<InternalAcquisitionPipelineContext>> {
-		return await ctx.safeCtx.async<InternalAcquisitionPipelineContext>(async ($) => {
+		return ctx.safeCtx.async<InternalAcquisitionPipelineContext>(async ($) => {
 			$.checkpoint();
 			const compat = $(this.deps.pluginCompatibilityService.checkAppVersionCompatibility(validation.manifest, ctx));
 
-			if (compat.isCompatible === true) {
+			if (compat.isCompatible) {
 				return { validation, appCompat: { isCompatible: true, shouldProceed: true, isIncompatibleFlag: false } };
 			}
 
@@ -179,7 +174,7 @@ export class PluginAcquisitionService {
 		ctx: OperationContext,
 		pipelineCtx: Readonly<InternalAcquisitionPipelineContext>,
 	): Promise<Result<InternalAcquisitionPipelineContext>> {
-		return await ctx.safeCtx.async<InternalAcquisitionPipelineContext>(async ($) => {
+		return ctx.safeCtx.async<InternalAcquisitionPipelineContext>(async ($) => {
 			$.checkpoint();
 			const assets = $(await this.deps.repositoryService.downloadReleaseAssets(ctx, pipelineCtx.validation.release));
 
@@ -198,20 +193,20 @@ export class PluginAcquisitionService {
 		ctx: OperationContext,
 		pipelineCtx: Readonly<InternalAcquisitionPipelineContext>,
 	): Promise<Result<InternalAcquisitionPipelineContext>> {
-		return await ctx.safeCtx.async<InternalAcquisitionPipelineContext>(async ($) => {
+		return ctx.safeCtx.async<InternalAcquisitionPipelineContext>(async ($) => {
 			$.checkpoint();
 			if (pipelineCtx.releaseFiles === undefined) {
 				return pipelineCtx;
 			}
 
 			const manifestContent = JSON.stringify(pipelineCtx.validation.manifest, null, 4);
-			const baseManifest = parse(PluginManifestExSchema, JSON.parse(manifestContent)) as PluginManifestEx;
+			const baseManifest = parse(PluginManifestExSchema, JSON.parse(manifestContent));
 
 			const compat = $(
 				this.deps.pluginCompatibilityService.checkPlatformCompatibility(baseManifest as PluginManifest, ctx),
 			);
 
-			if (compat.isCompatible === true) {
+			if (compat.isCompatible) {
 				return {
 					...pipelineCtx,
 					manifestContent,

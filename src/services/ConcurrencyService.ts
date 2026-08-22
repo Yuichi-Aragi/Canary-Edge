@@ -15,6 +15,16 @@ export interface ScheduleOptions {
 	readonly signal?: AbortSignal | undefined;
 }
 
+interface InternalScheduleTaskParams<T, E> {
+	readonly key: string;
+	readonly entityName: string;
+	readonly queuesMap: Map<string, PQueue>;
+	readonly globalQueue: PQueue;
+	readonly subQueueConcurrency: number;
+	readonly task: () => Promise<Result<T, E>>;
+	readonly options?: Readonly<ScheduleOptions> | undefined;
+}
+
 export class ConcurrencyService {
 	private readonly safeCtx = safe.bind(this);
 	private readonly globalRepoQueue: PQueue;
@@ -26,11 +36,11 @@ export class ConcurrencyService {
 	private disposed = false;
 
 	public constructor(private readonly deps: Readonly<Cradle>) {
-		const maxConcurrentRepos = Platform.isMobile === true ? 2 : 5;
+		const maxConcurrentRepos = Platform.isMobile ? 2 : 5;
 		this.globalRepoQueue = new PQueue({ concurrency: maxConcurrentRepos });
 		this.globalPluginQueue = new PQueue({ concurrency: 1 });
 
-		const maxConcurrentGitHub = Platform.isMobile === true ? 3 : 6;
+		const maxConcurrentGitHub = Platform.isMobile ? 3 : 6;
 		this.globalGitHubQueue = new PQueue({ concurrency: maxConcurrentGitHub });
 	}
 
@@ -41,15 +51,15 @@ export class ConcurrencyService {
 		options?: Readonly<ScheduleOptions>,
 	): Promise<Result<T, E | Error>> {
 		invariant(operationType !== "", "Operation type cannot be empty");
-		return await this.scheduleTaskInternal(
-			repo,
-			"repository",
-			this.repoQueues,
-			this.globalRepoQueue,
-			1,
+		return this.scheduleTaskInternal({
+			key: repo,
+			entityName: "repository",
+			queuesMap: this.repoQueues,
+			globalQueue: this.globalRepoQueue,
+			subQueueConcurrency: 1,
 			task,
 			options,
-		);
+		});
 	}
 
 	public async schedulePlugin<T, E = Error>(
@@ -59,15 +69,15 @@ export class ConcurrencyService {
 		options?: Readonly<ScheduleOptions>,
 	): Promise<Result<T, E | Error>> {
 		invariant(operationType !== "", "Operation type cannot be empty");
-		return await this.scheduleTaskInternal(
-			pluginId,
-			"plugin",
-			this.pluginQueues,
-			this.globalPluginQueue,
-			1,
+		return this.scheduleTaskInternal({
+			key: pluginId,
+			entityName: "plugin",
+			queuesMap: this.pluginQueues,
+			globalQueue: this.globalPluginQueue,
+			subQueueConcurrency: 1,
 			task,
 			options,
-		);
+		});
 	}
 
 	public async scheduleGitHub<T, E = Error>(
@@ -75,22 +85,22 @@ export class ConcurrencyService {
 		task: () => Promise<Result<T, E>>,
 		options?: Readonly<ScheduleOptions>,
 	): Promise<Result<T, E | Error>> {
-		return await this.scheduleTaskInternal(
+		return this.scheduleTaskInternal({
 			key,
-			"GitHub resource",
-			this.gitHubQueues,
-			this.globalGitHubQueue,
-			2,
+			entityName: "GitHub resource",
+			queuesMap: this.gitHubQueues,
+			globalQueue: this.globalGitHubQueue,
+			subQueueConcurrency: 2,
 			task,
 			options,
-		);
+		});
 	}
 
 	public async waitForOtherRepoOperations(
 		currentRepoOrId: string,
 		signal?: AbortSignal,
 	): Promise<Result<undefined>> {
-		return await this.safeCtx.async<undefined>(async ($, defer) => {
+		return this.safeCtx.async<undefined>(async ($, defer) => {
 			const effectiveSignal = signal ?? this.safeCtx.options.signal;
 			const ownManifestId = this.deps.plugin.manifest.id;
 
@@ -102,7 +112,7 @@ export class ConcurrencyService {
 
 			const otherQueues: PQueue[] = [];
 			for (const [repoKey, queue] of this.repoQueues.entries()) {
-				if (isSelf(repoKey) === false && (queue.size > 0 || queue.pending > 0)) {
+				if (!isSelf(repoKey) && (queue.size > 0 || queue.pending > 0)) {
 					otherQueues.push(queue);
 				}
 			}
@@ -129,7 +139,7 @@ export class ConcurrencyService {
 					});
 
 					defer((): void => {
-						if (abortHandler !== undefined && effectiveSignal !== undefined) {
+						if (abortHandler !== undefined) {
 							effectiveSignal.removeEventListener("abort", abortHandler);
 						}
 					});
@@ -140,7 +150,7 @@ export class ConcurrencyService {
 				}
 			}
 
-			if (this.deps.canaryStore.hasPendingOperations(isSelf) === true) {
+			if (this.deps.canaryStore.hasPendingOperations(isSelf)) {
 				let unsubscribe: (() => void) | undefined;
 				let abortHandler: (() => void) | undefined;
 
@@ -164,7 +174,7 @@ export class ConcurrencyService {
 						return;
 					}
 
-					if (this.deps.canaryStore.hasPendingOperations(isSelf) === false) {
+					if (!this.deps.canaryStore.hasPendingOperations(isSelf)) {
 						resolve();
 						return;
 					}
@@ -182,11 +192,11 @@ export class ConcurrencyService {
 					}
 
 					unsubscribe = this.deps.canaryStore.store.subscribe((): void => {
-						if (this.disposed === true) {
+						if (this.disposed) {
 							reject(new Error("ConcurrencyService has been disposed"));
 							return;
 						}
-						if (this.deps.canaryStore.hasPendingOperations(isSelf) === false) {
+						if (!this.deps.canaryStore.hasPendingOperations(isSelf)) {
 							resolve();
 						}
 					});
@@ -199,15 +209,11 @@ export class ConcurrencyService {
 	}
 
 	private async scheduleTaskInternal<T, E = Error>(
-		key: string,
-		entityName: string,
-		queuesMap: Map<string, PQueue>,
-		globalQueue: PQueue,
-		subQueueConcurrency: number,
-		task: () => Promise<Result<T, E>>,
-		options?: Readonly<ScheduleOptions>,
+		params: Readonly<InternalScheduleTaskParams<T, E>>,
 	): Promise<Result<T, E | Error>> {
-		return await this.safeCtx.async<T, E | Error>(async ($, defer) => {
+		return this.safeCtx.async<T, E | Error>(async ($, defer) => {
+			const { key, entityName, queuesMap, globalQueue, subQueueConcurrency, task, options } = params;
+
 			const identifierLabel = match(entityName)
 				.with("GitHub resource", (): string => {
 					return "GitHub resource";
@@ -245,13 +251,13 @@ export class ConcurrencyService {
 					async (): Promise<Result<T, E | Error>> => {
 						this.verifyNotAborted(effectiveSignal, entityName, key);
 
-						return await globalQueue.add(
+						return globalQueue.add(
 							async (): Promise<Result<T, E | Error>> => {
 								this.verifyNotAborted(effectiveSignal, entityName, key);
-								if (this.disposed === true) {
+								if (this.disposed) {
 									return safe.err(new Error("ConcurrencyService has been disposed"));
 								}
-								return await task();
+								return task();
 							},
 							{ priority: effectivePriority, signal: effectiveSignal },
 						);
@@ -263,7 +269,7 @@ export class ConcurrencyService {
 	}
 
 	private verifyNotAborted(signal: AbortSignal | undefined, entityName: string, key: string): void {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			throw new Error("ConcurrencyService has been disposed");
 		}
 		if (signal?.aborted === true) {
@@ -273,7 +279,7 @@ export class ConcurrencyService {
 	}
 
 	public dispose(): void {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			return;
 		}
 		this.disposed = true;

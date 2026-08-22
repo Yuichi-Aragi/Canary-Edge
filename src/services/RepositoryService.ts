@@ -24,7 +24,7 @@ export class RepositoryService {
 	public constructor(private readonly deps: Readonly<Cradle>) {}
 
 	public dispose(): void {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			return;
 		}
 		this.disposed = true;
@@ -35,8 +35,7 @@ export class RepositoryService {
 		specifyVersion: string,
 		channel?: ReleaseChannel,
 	): Promise<Result<ValidationContext>> {
-		return await ctx.safeCtx.async<ValidationContext>(async ($) => {
-			console.info(`[Canary-Edge] [Repository] [${ctx.repo}] Fetching and validating manifest for version '${specifyVersion !== "" ? specifyVersion : "latest"}'...`);
+		return ctx.safeCtx.async<ValidationContext>(async ($) => {
 			const release = $(await this.resolveRelease(ctx, specifyVersion, channel));
 			const usingBetaManifest = release.prerelease;
 
@@ -57,8 +56,7 @@ export class RepositoryService {
 		specifyVersion: string,
 		channel?: ReleaseChannel,
 	): Promise<Result<Release>> {
-		return await ctx.safeCtx.async<Release>(async ($) => {
-			console.info(`[Canary-Edge] [Repository] [${ctx.repo}] Resolving release (version: '${specifyVersion !== "" ? specifyVersion : "latest"}', channel: '${channel ?? "default"}')...`);
+		return ctx.safeCtx.async<Release>(async ($) => {
 			$(await this.deps.gitHubRepositoryService.checkAccess(ctx.repo, ctx.token, ctx.safeCtx));
 
 			if (specifyVersion !== "" && specifyVersion !== "latest") {
@@ -73,11 +71,10 @@ export class RepositoryService {
 		ctx: OperationContext,
 		release: Readonly<Release>,
 	): Promise<Result<RepositoryValidationResult>> {
-		return await ctx.safeCtx.async<RepositoryValidationResult>(async ($) => {
-			console.info(`[Canary-Edge] [Repository] [${ctx.repo}] Downloading manifest.json asset for tag '${release.tag_name}'...`);
+		return ctx.safeCtx.async<RepositoryValidationResult>(async ($) => {
 			const buf = $(await this.deps.gitHubAssetService.downloadAsset(release, "manifest.json", ctx.token, ctx.safeCtx));
 
-			if (buf === null || buf === undefined) {
+			if (buf === null) {
 				throw new Error(ERROR_MESSAGES.MANIFEST_MISSING);
 			}
 
@@ -90,9 +87,8 @@ export class RepositoryService {
 		ctx: OperationContext,
 		release: Readonly<Release>,
 	): Promise<Result<{ readonly mainJs: ArrayBuffer | null; readonly styles: ArrayBuffer | null }>> {
-		return await ctx.safeCtx.async<{ readonly mainJs: ArrayBuffer | null; readonly styles: ArrayBuffer | null }>(
+		return ctx.safeCtx.async<{ readonly mainJs: ArrayBuffer | null; readonly styles: ArrayBuffer | null }>(
 			async ($) => {
-				console.info(`[Canary-Edge] [Repository] [${ctx.repo}] Downloading assets (main.js, styles.css) for tag '${release.tag_name}'...`);
 				const [mainJsRes, stylesRes] = await Promise.all([
 					this.deps.gitHubAssetService.downloadAsset(release, "main.js", ctx.token, ctx.safeCtx),
 					this.deps.gitHubAssetService.downloadAsset(release, "styles.css", ctx.token, ctx.safeCtx),
@@ -102,8 +98,8 @@ export class RepositoryService {
 				const styles = $(stylesRes);
 
 				return {
-					mainJs: mainJs !== undefined ? mainJs : null,
-					styles: styles !== undefined ? styles : null,
+					mainJs,
+					styles,
 				};
 			},
 		);
@@ -114,20 +110,19 @@ export class RepositoryService {
 		version: string,
 		overrideChannel?: ReleaseChannel,
 	): Promise<Result<Release>> {
-		return await ctx.safeCtx.async<Release>(async ($) => {
+		return ctx.safeCtx.async<Release>(async ($) => {
 			const config = $(this.deps.settingsService.getPluginConfiguration(ctx.repo));
-			const channel: ReleaseChannel = overrideChannel ?? ctx.overrides?.releaseChannel ?? config.releaseChannel ?? "stable";
+			const channel: ReleaseChannel = overrideChannel ?? ctx.overrides?.releaseChannel ?? config.releaseChannel;
 			const release = $(
-				await this.deps.gitHubReleaseService.grabReleaseFromRepository(
-					ctx.repo,
+				await this.deps.gitHubReleaseService.grabReleaseFromRepository(ctx.repo, {
 					version,
-					channel,
-					ctx.token,
-					ctx.safeCtx,
-				),
+					channelOrIncludePrereleases: channel,
+					token: ctx.token,
+					ctx: ctx.safeCtx,
+				}),
 			);
 
-			invariant(release !== undefined && release !== null, ERROR_MESSAGES.NO_RELEASES);
+			invariant(release !== null, ERROR_MESSAGES.NO_RELEASES);
 			return release;
 		});
 	}
@@ -136,19 +131,19 @@ export class RepositoryService {
 		ctx: OperationContext,
 		overrideChannel?: ReleaseChannel,
 	): Promise<Result<Release>> {
-		return await ctx.safeCtx.async<Release>(async ($) => {
+		return ctx.safeCtx.async<Release>(async ($) => {
 			const releases = $(await this.deps.gitHubReleaseService.getReleases(ctx.repo, ctx.token, ctx.safeCtx));
 
-			if (releases === undefined || releases.length === 0) {
+			if (releases.length === 0) {
 				throw new Error(ERROR_MESSAGES.NO_RELEASES);
 			}
 
 			const config = $(this.deps.settingsService.getPluginConfiguration(ctx.repo));
-			const channel: ReleaseChannel = overrideChannel ?? ctx.overrides?.releaseChannel ?? config.releaseChannel ?? "stable";
+			const channel: ReleaseChannel = overrideChannel ?? ctx.overrides?.releaseChannel ?? config.releaseChannel;
 
 			const bestRelease = $(this.deps.gitHubReleaseService.selectBestRelease(releases, channel));
 
-			if (bestRelease === undefined || bestRelease === null) {
+			if (bestRelease === null) {
 				throw new Error(`${ERROR_MESSAGES.NO_RELEASES} for release channel '${channel}'.`);
 			}
 
@@ -166,7 +161,7 @@ export class RepositoryService {
 				return JSON.parse(raw);
 			});
 
-			if (parseRes.ok === false) {
+			if (!parseRes.ok) {
 				const jsonErr = parseRes.error;
 				const errDetail = jsonErr instanceof Error ? jsonErr.message : String(jsonErr);
 				throw new Error(`${ERROR_MESSAGES.MANIFEST_INVALID} Malformed JSON in manifest for ${ctx.repo}: ${errDetail}`);
@@ -175,7 +170,7 @@ export class RepositoryService {
 			const manifestJson: unknown = parseRes.value;
 			const validationResult = safeParse(PluginManifestSchema, manifestJson);
 
-			if (validationResult.success === false) {
+			if (!validationResult.success) {
 				const issues = validationResult.issues
 					.map((i: BaseIssue<unknown>): string => {
 						return i.message;
@@ -193,9 +188,6 @@ export class RepositoryService {
 				manifestVersion !== null &&
 				compareVersions(expectedVersion, manifestVersion) !== 0
 			) {
-				console.info(
-					`[Canary-Edge] [Repository] Version mismatch for ${ctx.repo}: Release ${release.tag_name} vs Manifest ${manifest.version}. Using Release version.`,
-				);
 				manifest.version = expectedVersion.version;
 			}
 

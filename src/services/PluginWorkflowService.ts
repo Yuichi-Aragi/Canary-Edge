@@ -17,6 +17,27 @@ import type {
 } from "@/domain/types";
 import type { Result, Unwrapper } from "@/utils/safe";
 
+interface ExecuteInstallParams {
+	readonly ctx: OperationContext;
+	readonly specifyVersion: string;
+	readonly forceReinstall: boolean;
+	readonly effectiveEnableAfterInstall: boolean;
+	readonly isFrozen: boolean;
+	readonly onChangelogReady?: ((changelog: string) => void) | undefined;
+	readonly $inner: Unwrapper<Error>;
+}
+
+interface ExecuteUpdateParams {
+	readonly ctx: OperationContext;
+	readonly specifyVersion: string;
+	readonly effectiveEnableAfterInstall: boolean;
+	readonly seeIfUpdatedOnly: boolean;
+	readonly reportIfNotUpdated: boolean;
+	readonly forceReinstall: boolean;
+	readonly onChangelogReady?: ((changelog: string) => void) | undefined;
+	readonly $inner: Unwrapper<Error>;
+}
+
 export class PluginWorkflowService {
 	private readonly safeCtx = safe.bind(this);
 	private disposed = false;
@@ -24,7 +45,7 @@ export class PluginWorkflowService {
 	public constructor(private readonly deps: Readonly<Cradle>) {}
 
 	public dispose(): void {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			return;
 		}
 		this.disposed = true;
@@ -33,7 +54,6 @@ export class PluginWorkflowService {
 	public cancelOperation(repositoryPath: string): Result<undefined> {
 		return this.safeCtx(($): undefined => {
 			const scrubbed = scrubRepositoryUrl(repositoryPath);
-			console.info(`[Canary-Edge] [Workflow] Cancelling active operation for '${scrubbed}'...`);
 			$(this.deps.cancellationService.cancel(scrubbed));
 			this.deps.operationTrackingService.fail(scrubbed, new Error("Operation explicitly cancelled by user"));
 			return undefined;
@@ -42,7 +62,6 @@ export class PluginWorkflowService {
 
 	public cancelAllOperations(): Result<undefined> {
 		return this.safeCtx(($): undefined => {
-			console.info("[Canary-Edge] [Workflow] Cancelling all active plugin operations...");
 			$(this.deps.cancellationService.cancelAllActiveOperations());
 			$(this.deps.uiService.dismissPromptsForRepo(""));
 			this.deps.canaryStore.dismissAllPrompts();
@@ -52,7 +71,7 @@ export class PluginWorkflowService {
 
 	public async addPlugin(options: Readonly<AddPluginOptions>): Promise<Result<InstallOperationResult>> {
 		const safeCtx = safe.from(options.signal).bind(this);
-		return await safeCtx.async<InstallOperationResult>(async ($) => {
+		return safeCtx.async<InstallOperationResult>(async ($) => {
 			const {
 				repositoryPath,
 				specifyVersion = "",
@@ -68,9 +87,6 @@ export class PluginWorkflowService {
 			} = options;
 
 			const scrubbedRepo = this.validateRepoOrThrow(repositoryPath, $);
-			console.info(
-				`[Canary-Edge] [Workflow] [${scrubbedRepo}] Initiating install workflow (version: '${specifyVersion !== "" ? specifyVersion : "latest"}')...`,
-			);
 
 			const signal = providedSignal ?? this.deps.cancellationService.register(scrubbedRepo, "install");
 			const finalSecretId = $(this.deps.settingsService.resolveTokenSecretId(scrubbedRepo, privateApiKeySecretId));
@@ -93,7 +109,7 @@ export class PluginWorkflowService {
 					ctx.repo,
 					ctx.operationType,
 					async (): Promise<Result<InstallOperationResult>> => {
-						return await ctx.safeCtx.async<InstallOperationResult>(async ($inner, defer) => {
+						return ctx.safeCtx.async<InstallOperationResult>(async ($inner, defer) => {
 							let taskSucceeded = false;
 							const guard = this.deps.operationTrackingService.createScopeGuard(
 								ctx.repo,
@@ -111,15 +127,15 @@ export class PluginWorkflowService {
 							const effectiveEnableAfterInstall =
 								enableAfterInstall ?? overrides?.autoEnable ?? config.autoEnable;
 
-							const installResult = await this.executeInstallOperation(
-								activeCtx,
+							const installResult = await this.executeInstallOperation({
+								ctx: activeCtx,
 								specifyVersion,
 								forceReinstall,
 								effectiveEnableAfterInstall,
 								isFrozen,
 								onChangelogReady,
 								$inner,
-							);
+							});
 
 							taskSucceeded = true;
 							return installResult;
@@ -133,7 +149,7 @@ export class PluginWorkflowService {
 
 	public async updatePlugin(options: Readonly<UpdatePluginOptions>): Promise<Result<UpdateOperationResult>> {
 		const safeCtx = safe.from(options.signal).bind(this);
-		return await safeCtx.async<UpdateOperationResult>(async ($) => {
+		return safeCtx.async<UpdateOperationResult>(async ($) => {
 			const {
 				repositoryPath,
 				onlyCheckDontUpdate = false,
@@ -149,20 +165,20 @@ export class PluginWorkflowService {
 
 			const scrubbedRepo = scrubRepositoryUrl(repositoryPath);
 
-			if (this.deps.plugin.app.workspace.layoutReady === false) {
+			if (!this.deps.plugin.app.workspace.layoutReady) {
 				const layoutMsg = `[Canary-Edge] Update check for ${scrubbedRepo} skipped: Layout not ready`;
 				console.warn(layoutMsg);
 				throw new Error(layoutMsg);
 			}
 
-			if (skipNetworkCheck === false) {
+			if (!skipNetworkCheck) {
 				const isConnected = safe.unwrapOr(
 					await safe.tryAsync((): Promise<boolean> => {
 						return isConnectedToInternet();
 					}),
 					false,
 				);
-				if (isConnected === false) {
+				if (!isConnected) {
 					console.error(`[Canary-Edge] Network connectivity check failed: ${ERROR_MESSAGES.OFFLINE}`);
 					$(this.deps.notificationService.show(ERROR_MESSAGES.OFFLINE, { timeout: 5 }, "error"));
 					throw new Error(ERROR_MESSAGES.OFFLINE);
@@ -192,7 +208,7 @@ export class PluginWorkflowService {
 					ctx.repo,
 					ctx.operationType,
 					async (): Promise<Result<UpdateOperationResult>> => {
-						return await ctx.safeCtx.async<UpdateOperationResult>(async ($inner, defer) => {
+						return ctx.safeCtx.async<UpdateOperationResult>(async ($inner, defer) => {
 							let taskSucceeded = false;
 							const guard = this.deps.operationTrackingService.createScopeGuard(
 								ctx.repo,
@@ -209,16 +225,16 @@ export class PluginWorkflowService {
 							const config = $inner(this.deps.settingsService.getPluginConfiguration(ctx.repo));
 							const effectiveEnableAfterInstall = config.autoEnable;
 
-							const updateResult = await this.executeUpdateOperation(
-								activeCtx,
-								targetVersion,
+							const updateResult = await this.executeUpdateOperation({
+								ctx: activeCtx,
+								specifyVersion: targetVersion,
 								effectiveEnableAfterInstall,
-								onlyCheckDontUpdate,
+								seeIfUpdatedOnly: onlyCheckDontUpdate,
 								reportIfNotUpdated,
 								forceReinstall,
 								onChangelogReady,
 								$inner,
-							);
+							});
 
 							taskSucceeded = true;
 							return updateResult;
@@ -231,9 +247,8 @@ export class PluginWorkflowService {
 	}
 
 	public async deletePlugin(repositoryPath: string): Promise<Result<undefined>> {
-		return await this.safeCtx.async<undefined>(async ($) => {
+		return this.safeCtx.async<undefined>(async ($) => {
 			const scrubbedRepo = scrubRepositoryUrl(repositoryPath);
-			console.info(`[Canary-Edge] [Workflow] Removing '${scrubbedRepo}' from plugin tracking...`);
 			const signal = this.deps.cancellationService.register(scrubbedRepo, "delete");
 			const ctx = createOperationContext({
 				repo: scrubbedRepo,
@@ -247,7 +262,7 @@ export class PluginWorkflowService {
 					ctx.repo,
 					ctx.operationType,
 					async (): Promise<Result<undefined>> => {
-						return await ctx.safeCtx.async<undefined>(async (_$inner, defer) => {
+						return ctx.safeCtx.async<undefined>(async (_$inner, defer) => {
 							let taskSucceeded = false;
 							const guard = this.deps.operationTrackingService.createScopeGuard(
 								ctx.repo,
@@ -275,11 +290,10 @@ export class PluginWorkflowService {
 
 	public async savePluginSettings(options: Readonly<SavePluginSettingsOptions>): Promise<Result<undefined>> {
 		const safeCtx = safe.from(options.signal).bind(this);
-		return await safeCtx.async<undefined>(async ($) => {
+		return safeCtx.async<undefined>(async ($) => {
 			const { repositoryPath, privateApiKeySecretId, overrides, signal: providedSignal, priority = 10 } = options;
 
 			const scrubbedRepo = scrubRepositoryUrl(repositoryPath);
-			console.info(`[Canary-Edge] [Workflow] Persisting configuration settings for '${scrubbedRepo}'...`);
 
 			const signal = providedSignal ?? this.deps.cancellationService.register(scrubbedRepo, "settings");
 			const ctx = createOperationContext({
@@ -296,7 +310,7 @@ export class PluginWorkflowService {
 					ctx.repo,
 					ctx.operationType,
 					async (): Promise<Result<undefined>> => {
-						return await ctx.safeCtx.async<undefined>(async (_$inner, defer) => {
+						return ctx.safeCtx.async<undefined>(async (_$inner, defer) => {
 							let taskSucceeded = false;
 							const guard = this.deps.operationTrackingService.createScopeGuard(
 								ctx.repo,
@@ -324,7 +338,7 @@ export class PluginWorkflowService {
 
 	private validateRepoOrThrow(repositoryPath: string, $: Unwrapper<Error>): string {
 		const { isValid, scrubbed } = validateRepositoryIdentifier(repositoryPath);
-		if (isValid === false) {
+		if (!isValid) {
 			const errMsg = `Invalid repository format: '${repositoryPath}'. Must be in 'owner/repo' format.`;
 			console.warn(`[Canary-Edge] [Workflow] Validation rejected repository identifier: '${repositoryPath}'`);
 			$(this.deps.notificationService.show(errMsg, {}, "warn"));
@@ -334,14 +348,18 @@ export class PluginWorkflowService {
 	}
 
 	private async executeInstallOperation(
-		ctx: OperationContext,
-		specifyVersion: string,
-		forceReinstall: boolean,
-		effectiveEnableAfterInstall: boolean,
-		isFrozen: boolean,
-		onChangelogReady: ((changelog: string) => void) | undefined,
-		$inner: Unwrapper<Error>,
+		params: Readonly<ExecuteInstallParams>,
 	): Promise<InstallOperationResult> {
+		const {
+			ctx,
+			specifyVersion,
+			forceReinstall,
+			effectiveEnableAfterInstall,
+			isFrozen,
+			onChangelogReady,
+			$inner,
+		} = params;
+
 		const installResObj = await this.deps.pluginInstallOperation.execute(ctx, {
 			specifyVersion,
 			forceReinstall,
@@ -368,15 +386,19 @@ export class PluginWorkflowService {
 	}
 
 	private async executeUpdateOperation(
-		ctx: OperationContext,
-		specifyVersion: string,
-		effectiveEnableAfterInstall: boolean,
-		seeIfUpdatedOnly: boolean,
-		reportIfNotUpdated: boolean,
-		forceReinstall: boolean,
-		onChangelogReady: ((changelog: string) => void) | undefined,
-		$inner: Unwrapper<Error>,
+		params: Readonly<ExecuteUpdateParams>,
 	): Promise<UpdateOperationResult> {
+		const {
+			ctx,
+			specifyVersion,
+			effectiveEnableAfterInstall,
+			seeIfUpdatedOnly,
+			reportIfNotUpdated,
+			forceReinstall,
+			onChangelogReady,
+			$inner,
+		} = params;
+
 		const updateResObj = await this.deps.pluginUpdateOperation.execute(ctx, {
 			specifyVersion,
 			enableAfterInstall: effectiveEnableAfterInstall,
@@ -405,7 +427,7 @@ export class PluginWorkflowService {
 
 	private createOverrideHandler(): (request: Readonly<OverrideRequest>) => Promise<Result<boolean>> {
 		return async (request: Readonly<OverrideRequest>): Promise<Result<boolean>> => {
-			return await this.deps.uiService.confirmOverride(request);
+			return this.deps.uiService.confirmOverride(request);
 		};
 	}
 }

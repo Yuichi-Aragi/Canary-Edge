@@ -14,7 +14,7 @@ export class OperationTrackingService {
 	public constructor(private readonly deps: Readonly<Cradle>) {}
 
 	public dispose(): void {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			return;
 		}
 		this.disposed = true;
@@ -28,7 +28,7 @@ export class OperationTrackingService {
 		return this.safeCtx(($): undefined => {
 			const scrubbed = scrubRepositoryUrl(repo);
 			this.deps.canaryStore.updateOperationState(scrubbed, state);
-			if (dismissPrompts === true) {
+			if (dismissPrompts) {
 				$(this.deps.uiService.dismissPromptsForRepo(scrubbed));
 			}
 			return undefined;
@@ -37,7 +37,6 @@ export class OperationTrackingService {
 
 	public start(repo: string, type: OperationType, initialMessage = "Initializing..."): Result<undefined> {
 		const scrubbed = scrubRepositoryUrl(repo);
-		console.info(`[Canary-Edge] [OperationTracking] [${scrubbed}] Operation started (${type}): ${initialMessage}`);
 		return this.setTrackingState(scrubbed, {
 			type,
 			step: "Initialization",
@@ -50,7 +49,6 @@ export class OperationTrackingService {
 	public update(repo: string, step: string, message: string): Result<undefined> {
 		const scrubbed = scrubRepositoryUrl(repo);
 		const current = this.deps.canaryStore.getOperationState(scrubbed);
-		console.info(`[Canary-Edge] [OperationTracking] [${scrubbed}] Telemetry update [${step}]: ${message}`);
 
 		return this.setTrackingState(scrubbed, {
 			type: current?.type ?? "check",
@@ -64,7 +62,6 @@ export class OperationTrackingService {
 	public complete(repo: string, finalMessage = "Completed successfully"): Result<undefined> {
 		const scrubbed = scrubRepositoryUrl(repo);
 		const current = this.deps.canaryStore.getOperationState(scrubbed);
-		console.info(`[Canary-Edge] [OperationTracking] [${scrubbed}] Operation completed: ${finalMessage}`);
 
 		return this.setTrackingState(
 			scrubbed,
@@ -102,7 +99,6 @@ export class OperationTrackingService {
 
 	public clear(repo: string): Result<undefined> {
 		const scrubbed = scrubRepositoryUrl(repo);
-		console.info(`[Canary-Edge] [OperationTracking] [${scrubbed}] Operation state cleared.`);
 		return this.setTrackingState(scrubbed, null, true);
 	}
 
@@ -130,16 +126,16 @@ export class OperationTrackingService {
 				return this.fail(scrubbed, error);
 			},
 			cleanup: (taskSucceeded: boolean, fallbackErrorMessage?: string): void => {
-				if (taskSucceeded === false) {
+				if (!taskSucceeded) {
 					const current = this.deps.canaryStore.getOperationState(scrubbed);
 					if (current?.status !== "error") {
 						const msg = fallbackErrorMessage ?? defaultFailureMessage;
 						this.fail(scrubbed, new Error(msg));
 					}
-					if (manageCancellation === true) {
+					if (manageCancellation) {
 						this.deps.cancellationService.cancel(scrubbed);
 					}
-				} else if (manageCancellation === true) {
+				} else if (manageCancellation) {
 					this.deps.cancellationService.unregister(scrubbed);
 				}
 			},

@@ -73,23 +73,23 @@ export class BratIntegrationService {
 	public constructor(private readonly deps: Readonly<Cradle>) {}
 
 	public dispose(): void {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			return;
 		}
 		this.disposed = true;
 	}
 
 	public async syncBratPlugins(): Promise<Result<undefined>> {
-		return await this.safeCtx.async<undefined>(async ($) => {
+		return this.safeCtx.async<undefined>(async ($) => {
 			$.checkpoint();
 			const settings = $(await this.deps.settingsService.getSettingsQueued());
-			if (settings.global.enableBratSync === false) {
+			if (!settings.global.enableBratSync) {
 				return undefined;
 			}
 
 			const app = this.deps.plugin.app as InternalApp;
 
-			if (this.isBratInstalled(app) === false) {
+			if (!this.isBratInstalled(app)) {
 				return undefined;
 			}
 
@@ -120,13 +120,13 @@ export class BratIntegrationService {
 	}
 
 	private async readBratSettings(app: Readonly<InternalApp>, path: string): Promise<Result<string>> {
-		return await this.safeCtx.async<string>(async ($) => {
+		return this.safeCtx.async<string>(async ($) => {
 			$.checkpoint();
 			const exists = await app.vault.adapter.exists(path);
-			if (exists === false) {
+			if (!exists) {
 				return "";
 			}
-			return await app.vault.adapter.read(path);
+			return app.vault.adapter.read(path);
 		});
 	}
 
@@ -137,14 +137,14 @@ export class BratIntegrationService {
 				return JSON.parse(rawContent);
 			});
 
-			if (parseRes.ok === false) {
+			if (!parseRes.ok) {
 				throw new Error("BRAT data configuration layout was invalid JSON.");
 			}
 
 			const parsed: unknown = parseRes.value;
 			const validationResult = safeParse(BratDataSchema, parsed);
 
-			if (validationResult.success === false) {
+			if (!validationResult.success) {
 				throw new Error("BRAT data configuration layout was invalid or unrecognizable.");
 			}
 
@@ -162,21 +162,17 @@ export class BratIntegrationService {
 			}
 			const existing = pluginMap.get(scrubbed);
 			pluginMap.set(scrubbed, {
-				isFrozen: isFrozen === true || (existing?.isFrozen ?? false),
+				isFrozen: isFrozen || (existing?.isFrozen ?? false),
 				tokenName: tokenName ?? existing?.tokenName,
 			});
 		};
 
 		for (const rawRepo of bratData.pluginList) {
-			if (rawRepo !== undefined) {
-				registerPlugin(rawRepo, false);
-			}
+			registerPlugin(rawRepo, false);
 		}
 
 		for (const entry of bratData.pluginSubListFrozenVersion) {
-			if (entry !== undefined) {
-				registerPlugin(entry.repo, isVersionFrozen(entry.version), trimToUndefined(entry.tokenName));
-			}
+			registerPlugin(entry.repo, isVersionFrozen(entry.version), trimToUndefined(entry.tokenName));
 		}
 
 		return pluginMap;
@@ -186,7 +182,7 @@ export class BratIntegrationService {
 		pluginMap: ReadonlyMap<string, BratPluginMeta>,
 		globalTokenName: string,
 	): Promise<Result<undefined>> {
-		return await this.safeCtx.async<undefined>(async ($) => {
+		return this.safeCtx.async<undefined>(async ($) => {
 			$.checkpoint();
 			const entries = Array.from(pluginMap.entries());
 			if (entries.length === 0) {
@@ -199,7 +195,7 @@ export class BratIntegrationService {
 			const newlyAdded: string[] = [];
 			for (const [repo] of entries) {
 				const exists = Object.hasOwn(settings.plugins, repo);
-				if (exists === false) {
+				if (!exists) {
 					newlyAdded.push(repo);
 				}
 			}
@@ -217,20 +213,13 @@ export class BratIntegrationService {
 					const tokenSecretId = resolveTokenSecret(meta.tokenName, globalTokenName);
 
 					draft.plugins[repo] = {
-						status: meta.isFrozen === true ? PLUGIN_STATUS_FROZEN : PLUGIN_STATUS_ACTIVE,
+						status: meta.isFrozen ? PLUGIN_STATUS_FROZEN : PLUGIN_STATUS_ACTIVE,
 						tokenSecretId,
 					};
 				}
 			}, expectedVersion);
 
 			$(updateResult);
-
-			for (const repo of newlyAdded) {
-				const meta = pluginMap.get(repo);
-				const isFrozen = meta?.isFrozen ?? false;
-				console.info(`Successfully integrated BRAT plugin into Canary Edge: ${repo} (frozen: ${String(isFrozen)})`);
-			}
-
 			return undefined;
 		});
 	}

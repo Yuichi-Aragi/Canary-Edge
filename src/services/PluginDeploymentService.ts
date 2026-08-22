@@ -15,7 +15,7 @@ export class PluginDeploymentService {
 	public constructor(private readonly deps: Readonly<Cradle>) {}
 
 	public dispose(): void {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			return;
 		}
 		this.disposed = true;
@@ -26,32 +26,28 @@ export class PluginDeploymentService {
 		pluginId: string,
 		enable: boolean,
 	): Promise<Result<boolean>> {
-		return await ctx.safeCtx.async<boolean>(async ($) => {
+		return ctx.safeCtx.async<boolean>(async ($) => {
 			$.checkpoint();
 			const ownManifestId = this.deps.plugin.manifest.id;
 			const isTargetCanaryEdge =
-				isCanaryEdge(pluginId, ownManifestId) === true || isCanaryEdge(ctx.repo, ownManifestId) === true;
+				isCanaryEdge(pluginId, ownManifestId) || isCanaryEdge(ctx.repo, ownManifestId);
 
-			if (isTargetCanaryEdge === true) {
-				console.info(`[Canary-Edge] [Deployment] [${pluginId}] Waiting for concurrent operations before self-reload...`);
+			if (isTargetCanaryEdge) {
 				$(await this.deps.concurrencyService.waitForOtherRepoOperations(ctx.repo, ctx.signal));
 			}
 
 			const internalPlugins = $(this.deps.pluginLifecycle.getInternalPlugins());
 			const isCurrentlyEnabled = Object.hasOwn(internalPlugins.plugins, pluginId);
 
-			if (enable === true) {
-				if (isCurrentlyEnabled === true) {
-					console.info(`[Canary-Edge] [Deployment] [${pluginId}] Reloading active plugin instance...`);
+			if (enable) {
+				if (isCurrentlyEnabled) {
 					$(await this.deps.pluginLifecycle.reloadPlugin(pluginId, ctx));
 					return true;
 				}
-				console.info(`[Canary-Edge] [Deployment] [${pluginId}] Enabling plugin and persisting state...`);
 				$(await this.deps.pluginLifecycle.enablePluginAndSave(pluginId, ctx));
 				return false;
 			}
 
-			console.info(`[Canary-Edge] [Deployment] [${pluginId}] Disabling plugin and persisting state...`);
 			$(await this.deps.pluginLifecycle.disablePluginAndSave(pluginId, ctx));
 			return false;
 		});
@@ -61,7 +57,7 @@ export class PluginDeploymentService {
 		ctx: OperationContext,
 		options: Readonly<ExtendedDeploymentOptions>,
 	): Promise<Result<undefined>> {
-		return await ctx.safeCtx.async<undefined>(async ($) => {
+		return ctx.safeCtx.async<undefined>(async ($) => {
 			$.checkpoint();
 			const {
 				manifest,
@@ -78,14 +74,12 @@ export class PluginDeploymentService {
 				onPhase("files");
 			}
 
-			console.info(`[Canary-Edge] [Deployment] [${ctx.repo}] Writing release assets for plugin '${manifest.id}'...`);
 			$(await this.deps.pluginInstaller.writeReleaseFilesToPluginFolder(manifest.id, files, ctx.safeCtx));
 
 			if (onPhase !== undefined) {
 				onPhase("settings");
 			}
 
-			console.info(`[Canary-Edge] [Deployment] [${ctx.repo}] Persisting plugin configuration to settings store...`);
 			$(
 				await this.deps.settingsService.upsertPlugin(
 					ctx.repo,
@@ -104,7 +98,6 @@ export class PluginDeploymentService {
 				onPhase("manifests");
 			}
 
-			console.info(`[Canary-Edge] [Deployment] [${ctx.repo}] Triggering Obsidian plugin manifest refresh...`);
 			$(await this.deps.pluginLifecycle.loadManifests(ctx));
 
 			if (onPhase !== undefined) {

@@ -9,7 +9,7 @@ export class CancellationService {
 	private disposed = false;
 
 	public getSignal(repo: string, operationType?: string): AbortSignal {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			throw new Error("CancellationService has been disposed");
 		}
 		const controller = this.activeControllers.get(repo);
@@ -25,7 +25,7 @@ export class CancellationService {
 	}
 
 	public getSafeContext(repo: string, operationType?: string): Api {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			throw new Error("CancellationService has been disposed");
 		}
 		return safe.with({
@@ -34,7 +34,7 @@ export class CancellationService {
 	}
 
 	public register(repo: string, operationType?: string): AbortSignal {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			throw new Error("CancellationService has been disposed");
 		}
 		const existingController = this.activeControllers.get(repo);
@@ -60,7 +60,7 @@ export class CancellationService {
 	}
 
 	public registerSafeContext(repo: string, operationType?: string): Api {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			throw new Error("CancellationService has been disposed");
 		}
 		return safe.with({
@@ -72,7 +72,7 @@ export class CancellationService {
 		return this.safeCtx((): undefined => {
 			const controller = this.activeControllers.get(repo);
 			if (controller !== undefined) {
-				if (controller.signal.aborted === false) {
+				if (!controller.signal.aborted) {
 					controller.abort(new Error(`Operation cancelled for repository: ${repo}`));
 				}
 				this.activeControllers.delete(repo);
@@ -88,7 +88,7 @@ export class CancellationService {
 	}
 
 	public hasActive(repo: string): boolean {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			return false;
 		}
 		const controller = this.activeControllers.get(repo);
@@ -96,7 +96,7 @@ export class CancellationService {
 	}
 
 	public getActiveType(repo: string): string | undefined {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			return undefined;
 		}
 		return this.activeTypes.get(repo);
@@ -113,12 +113,12 @@ export class CancellationService {
 	}
 
 	public dispose(): void {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			return;
 		}
 		this.disposed = true;
 		for (const controller of this.activeControllers.values()) {
-			if (controller.signal.aborted === false) {
+			if (!controller.signal.aborted) {
 				controller.abort(new Error("CancellationService has been disposed"));
 			}
 		}

@@ -50,7 +50,7 @@ export class PluginInstaller {
 	public constructor(private readonly deps: Readonly<Cradle>) {}
 
 	public dispose(): void {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			return;
 		}
 		this.disposed = true;
@@ -62,7 +62,7 @@ export class PluginInstaller {
 		ctx?: OperationContext | Api,
 	): Promise<Result<undefined>> {
 		const boundCtx = safe.from(resolveApiContext(ctx)).bind(this);
-		return await boundCtx.async<undefined>(async ($, defer) => {
+		return boundCtx.async<undefined>(async ($, defer) => {
 			$.checkpoint();
 			invariant(betaPluginId !== "", "Plugin ID is required");
 
@@ -71,19 +71,17 @@ export class PluginInstaller {
 			const assets = createReleaseAssets(relFiles);
 			const existsBefore = await adapter.exists(targetFolder);
 
-			console.info(`[Canary-Edge] [Installer] [${betaPluginId}] Writing release files to vault directory '${targetFolder}'...`);
-
 			let backup: FileBackup | null = null;
 			let writeCompleted = false;
 
 			defer(async (): Promise<void> => {
-				if (writeCompleted === true) {
+				if (writeCompleted) {
 					return;
 				}
 
 				console.warn(`[Canary-Edge] [Installer] [${betaPluginId}] Rolling back vault file operations...`);
 
-				if (existsBefore === true && backup !== null) {
+				if (existsBefore && backup !== null) {
 					for (const asset of assets) {
 						const restored = backup[asset.name];
 						const filePath = `${targetFolder}${asset.name}`;
@@ -108,7 +106,7 @@ export class PluginInstaller {
 				}
 			});
 
-			if (existsBefore === true) {
+			if (existsBefore) {
 				let oldMainJs: ArrayBuffer | null = null;
 				let oldStyles: ArrayBuffer | null = null;
 				let oldManifest: string | null = null;
@@ -118,16 +116,16 @@ export class PluginInstaller {
 					const filePath = `${targetFolder}${asset.name}`;
 					const fileExists = safe.unwrapOr(
 						await safe.tryAsync(async (): Promise<boolean> => {
-							return await adapter.exists(filePath);
+							return adapter.exists(filePath);
 						}),
 						false,
 					);
 
-					if (fileExists === true) {
+					if (fileExists) {
 						if (asset.type === "binary") {
 							const data = safe.unwrapOr(
 								await safe.tryAsync(async (): Promise<ArrayBuffer> => {
-									return await adapter.readBinary(filePath);
+									return adapter.readBinary(filePath);
 								}),
 								null,
 							);
@@ -139,7 +137,7 @@ export class PluginInstaller {
 						} else {
 							oldManifest = safe.unwrapOr(
 								await safe.tryAsync(async (): Promise<string> => {
-									return await adapter.read(filePath);
+									return adapter.read(filePath);
 								}),
 								null,
 							);
@@ -171,7 +169,6 @@ export class PluginInstaller {
 
 			$.checkpoint();
 			writeCompleted = true;
-			console.info(`[Canary-Edge] [Installer] [${betaPluginId}] Successfully written release files to '${targetFolder}'.`);
 			return undefined;
 		});
 	}
@@ -181,24 +178,23 @@ export class PluginInstaller {
 		ctx?: OperationContext | Api | AbortSignal,
 	): Promise<Result<string>> {
 		const boundCtx = safe.from(resolveApiContext(ctx)).bind(this);
-		return await boundCtx.async<string>(async ($) => {
+		return boundCtx.async<string>(async ($) => {
 			$.checkpoint();
 			invariant(pluginId !== "", "Plugin ID is required");
 
 			const targetFolder = getPluginFolderPath(this.deps.plugin.app.vault.configDir, pluginId);
-			console.info(`[Canary-Edge] [Installer] [${pluginId}] Reading local manifest from '${targetFolder}manifest.json'...`);
-			return await this.deps.plugin.app.vault.adapter.read(`${targetFolder}manifest.json`);
+			return this.deps.plugin.app.vault.adapter.read(`${targetFolder}manifest.json`);
 		});
 	}
 
 	private async safeRemove(adapter: Readonly<DataAdapter>, filePath: string): Promise<void> {
 		const exists = safe.unwrapOr(
 			await safe.tryAsync(async (): Promise<boolean> => {
-				return await adapter.exists(filePath);
+				return adapter.exists(filePath);
 			}),
 			false,
 		);
-		if (exists === true) {
+		if (exists) {
 			await safe.tryAsync(async (): Promise<void> => {
 				await adapter.remove(filePath);
 			});
@@ -208,11 +204,11 @@ export class PluginInstaller {
 	private async safeRemoveFolder(adapter: Readonly<DataAdapter>, folderPath: string): Promise<void> {
 		const exists = safe.unwrapOr(
 			await safe.tryAsync(async (): Promise<boolean> => {
-				return await adapter.exists(folderPath);
+				return adapter.exists(folderPath);
 			}),
 			false,
 		);
-		if (exists === false) {
+		if (!exists) {
 			return;
 		}
 
