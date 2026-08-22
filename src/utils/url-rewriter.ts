@@ -5,24 +5,33 @@ import remarkParse from "remark-parse";
 import remarkStringify from "remark-stringify";
 import { unified } from "unified";
 import { visit } from "unist-util-visit";
-import * as v from "valibot";
+import {
+	minLength,
+	object,
+	optional,
+	pipe,
+	regex,
+	safeParse,
+	string,
+	type InferOutput,
+} from "valibot";
 
 import { safe } from "./safe";
 
 import type { Element as HastElement, Root as HastRoot } from "hast";
-import type { Definition as MdastDefinition, Image as MdastImage, Link as MdastLink, Root as MdastRoot } from "mdast";
+import type { Root as MdastRoot } from "mdast";
 import type { Plugin as UnifiedPlugin } from "unified";
 import type { Result } from "./safe";
 
-const RepoConfigSchema = v.object({
-	repo: v.pipe(
-		v.string(),
-		v.regex(/^[^/]+\/[^/]+$/, "repo must be in 'owner/repo' format"),
+const RepoConfigSchema = object({
+	repo: pipe(
+		string(),
+		regex(/^[^/]+\/[^/]+$/, "repo must be in 'owner/repo' format"),
 	),
-	ref: v.optional(v.pipe(v.string(), v.minLength(1)), "HEAD"),
+	ref: optional(pipe(string(), minLength(1)), "HEAD"),
 });
 
-type RepoConfig = v.InferOutput<typeof RepoConfigSchema>;
+type RepoConfig = InferOutput<typeof RepoConfigSchema>;
 
 interface UrlContext {
 	readonly rawBaseUrl: string;
@@ -198,13 +207,10 @@ function remarkRewriteUrls(ctx: UrlContext): UnifiedPlugin<[], MdastRoot> {
 				}
 
 				if (nodeType === "image") {
-					(record as unknown as MdastImage).url = rewriteUrl(nodeUrl, ctx, "raw");
-				} else if (nodeType === "link") {
+					record["url"] = rewriteUrl(nodeUrl, ctx, "raw");
+				} else if (nodeType === "link" || nodeType === "definition") {
 					const target: AssetTarget = isLikelyAssetPath(nodeUrl) ? "raw" : "blob";
-					(record as unknown as MdastLink).url = rewriteUrl(nodeUrl, ctx, target);
-				} else if (nodeType === "definition") {
-					const target: AssetTarget = isLikelyAssetPath(nodeUrl) ? "raw" : "blob";
-					(record as unknown as MdastDefinition).url = rewriteUrl(nodeUrl, ctx, target);
+					record["url"] = rewriteUrl(nodeUrl, ctx, target);
 				}
 			});
 		};
@@ -219,7 +225,7 @@ function remarkRewriteHtmlNodes(ctx: UrlContext): UnifiedPlugin<[], MdastRoot> {
 					const processed = unified()
 						.use(rehypeParse, { fragment: true })
 						.use(rehypeRewriteUrls(ctx))
-						.use(rehypeStringify, { allowDangerousHtml: true })
+						.use(rehypeStringify)
 						.processSync(node.value);
 
 					return String(processed);
@@ -267,13 +273,14 @@ function rehypeRewriteUrls(ctx: UrlContext): UnifiedPlugin<[], HastRoot> {
 				}
 
 				for (const attr of attrs) {
-					const value = node.properties[attr];
+					const properties = node.properties;
+					const value = properties[attr];
 					if (typeof value !== "string" || value.length === 0) {
 						continue;
 					}
 
 					if (attr === "srcset") {
-						node.properties[attr] = rewriteSrcset(value, ctx);
+						properties[attr] = rewriteSrcset(value, ctx);
 					} else {
 						let target: AssetTarget = "raw";
 						if (tagName === "a" && attr === "href") {
@@ -282,7 +289,7 @@ function rehypeRewriteUrls(ctx: UrlContext): UnifiedPlugin<[], HastRoot> {
 							target = "raw";
 						}
 
-						node.properties[attr] = rewriteUrl(value, ctx, target);
+						properties[attr] = rewriteUrl(value, ctx, target);
 					}
 				}
 			});
@@ -357,7 +364,7 @@ export function rewriteMdResourceUrls(
 	repo: string,
 	ref = "HEAD"
 ): Result<string> {
-	const configParse = v.safeParse(RepoConfigSchema, { repo, ref });
+	const configParse = safeParse(RepoConfigSchema, { repo, ref });
 	if (!configParse.success) {
 		return safe.err(new Error(`Invalid repo config: repo="${repo}", ref="${ref}"`));
 	}
