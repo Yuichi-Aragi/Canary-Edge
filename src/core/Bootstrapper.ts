@@ -34,7 +34,7 @@ export class Bootstrapper {
 		const currentGen = this._gen;
 
 		if (this._bootPromise !== null) {
-			return await this._bootPromise;
+			return this._bootPromise;
 		}
 
 		this._bootPromise = this._executeBootstrap(currentGen);

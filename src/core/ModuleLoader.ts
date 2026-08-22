@@ -20,10 +20,10 @@ export class ModuleLoader {
 			}),
 		]);
 
-		if (awilixRes.ok === false) {
+		if (!awilixRes.ok) {
 			return safe.err(new Error(`[${this.appName}] Failed to resolve core modules`, { cause: awilixRes.error }));
 		}
-		if (schemasRes.ok === false) {
+		if (!schemasRes.ok) {
 			return safe.err(new Error(`[${this.appName}] Failed to resolve core modules`, { cause: schemasRes.error }));
 		}
 
@@ -87,7 +87,7 @@ export class ModuleLoader {
 			const modRes = await safe.tryAsync((): Promise<Record<string, unknown>> => {
 				return loader() as Promise<Record<string, unknown>>;
 			});
-			if (modRes.ok === false) {
+			if (!modRes.ok) {
 				return safe.err(new Error(`[${this.appName}] Failed to import module: ${moduleKey}`, { cause: modRes.error }));
 			}
 			const mod = modRes.value;
