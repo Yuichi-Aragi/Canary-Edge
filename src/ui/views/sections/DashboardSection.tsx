@@ -70,7 +70,7 @@ const DashboardRowContainer = memo(
 		});
 
 		const isRowDropdownActive = activeDropdownId?.startsWith(`${repo}-`) === true;
-		const rowActiveDropdownId = isRowDropdownActive === true ? activeDropdownId : null;
+		const rowActiveDropdownId = isRowDropdownActive ? activeDropdownId : null;
 
 		return (
 			<CanaryErrorBoundary variant="card">
@@ -144,7 +144,7 @@ function DashboardSectionView({
 	const renderListContent = (): JSX.Element => {
 		const hasPlugins = state.filteredPlugins.length > 0;
 
-		if (state.isLoading === true && hasPlugins === false) {
+		if (state.isLoading && !hasPlugins) {
 			let loadingTitle = "Loading Dashboard";
 			let loadingMessage = "Fetching installed and tracked plugins...";
 
@@ -161,9 +161,9 @@ function DashboardSectionView({
 			return <StateContainer message={loadingMessage} title={loadingTitle} type="loading" />;
 		}
 
-		if (hasPlugins === false && state.isLoading === false) {
+		if (!hasPlugins && !state.isLoading) {
 			const trimmedQuery = state.searchQuery.trim();
-			if (state.activeFilters.has("installing") === true) {
+			if (state.activeFilters.has("installing")) {
 				return (
 					<StateContainer
 						icon="check-circle"
@@ -194,7 +194,7 @@ function DashboardSectionView({
 
 		return (
 			<Virtuoso
-				className={clsx("ce-virtuoso-list", "ce-virtuoso-full-height", state.isScrolling === true ? "is-scrolling" : "")}
+				className={clsx("ce-virtuoso-list", "ce-virtuoso-full-height", state.isScrolling ? "is-scrolling" : "")}
 				computeItemKey={computeItemKey}
 				data={state.filteredPlugins}
 				increaseViewportBy={400}
@@ -281,8 +281,8 @@ export interface DashboardSectionProps {
 export function DashboardSection({ activeSection, onSectionChange }: DashboardSectionProps): JSX.Element {
 	const { isReady, isError, error, retry } = useCommunityPluginsSync();
 
-	if (isReady === false) {
-		if (isError === true) {
+	if (!isReady) {
+		if (isError) {
 			return (
 				<CanaryErrorBoundary>
 					<div className="ce-dashboard">
