@@ -4,11 +4,11 @@ import {
 	useState,
 	useCallback,
 	useMemo,
-	type ReactNode,
-	type JSX,
 } from "react";
 
 import { useWorkspaceMenuLock } from "@/ui/hooks/useWorkspaceMenuLock";
+
+import type { ReactNode, JSX } from "react";
 
 export interface PanelStackContextValue {
 	readonly registerPanel: (id: string) => void;
@@ -40,7 +40,7 @@ export function PanelStackProvider({ children }: PanelStackProviderProps): JSX.E
 
 	const unregisterPanel = useCallback((id: string): void => {
 		setStack((prevStack: readonly string[]): readonly string[] => {
-			if (prevStack.includes(id) === false) {
+			if (!prevStack.includes(id)) {
 				return prevStack;
 			}
 			return prevStack.filter((panelId: string): boolean => {
@@ -56,7 +56,7 @@ export function PanelStackProvider({ children }: PanelStackProviderProps): JSX.E
 			}
 			return stack[stack.length - 1] === id;
 		},
-		[stack]
+		[stack],
 	);
 
 	const getPanelDepth = useCallback(
@@ -67,7 +67,7 @@ export function PanelStackProvider({ children }: PanelStackProviderProps): JSX.E
 			}
 			return index;
 		},
-		[stack]
+		[stack],
 	);
 
 	const value = useMemo((): PanelStackContextValue => {
@@ -80,7 +80,7 @@ export function PanelStackProvider({ children }: PanelStackProviderProps): JSX.E
 		};
 	}, [registerPanel, unregisterPanel, isTopPanel, getPanelDepth, stack.length]);
 
-	return <PanelStackContext.Provider value={value}>{children}</PanelStackContext.Provider>;
+	return <PanelStackContext value={value}>{children}</PanelStackContext>;
 }
 
 const DEFAULT_PANEL_STACK_VALUE: PanelStackContextValue = {

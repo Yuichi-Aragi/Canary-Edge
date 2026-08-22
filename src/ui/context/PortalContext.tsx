@@ -1,4 +1,6 @@
-import { createContext, use, type ReactNode, type JSX } from "react";
+import { createContext, use } from "react";
+
+import type { ReactNode, JSX } from "react";
 
 export interface PortalContextValue {
 	readonly portalRef: HTMLElement | null;
@@ -13,7 +15,7 @@ export function PortalProvider({
 	readonly children: ReactNode;
 	readonly value: PortalContextValue;
 }): JSX.Element {
-	return <PortalContext.Provider value={value}>{children}</PortalContext.Provider>;
+	return <PortalContext value={value}>{children}</PortalContext>;
 }
 
 export function usePortalContext(): PortalContextValue {

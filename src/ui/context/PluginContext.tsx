@@ -1,16 +1,18 @@
-import { createContext, use, type ReactNode, type JSX } from "react";
+import { createContext, use } from "react";
+
 import type CanaryEdgePlugin from "@/main";
+import type { ReactNode, JSX } from "react";
 
 const PluginContext = createContext<CanaryEdgePlugin | null>(null);
 
 export function PluginProvider({ 
 	plugin, 
-	children 
+	children,
 }: { 
 	readonly plugin: CanaryEdgePlugin; 
 	readonly children: ReactNode; 
 }): JSX.Element {
-	return <PluginContext.Provider value={plugin}>{children}</PluginContext.Provider>;
+	return <PluginContext value={plugin}>{children}</PluginContext>;
 }
 
 export function usePlugin(): CanaryEdgePlugin {
