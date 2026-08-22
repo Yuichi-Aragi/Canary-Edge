@@ -42,7 +42,7 @@ class PluginCommands {
 	}
 
 	public register(): void {
-		if (this.isRegistered === true) {
+		if (this.isRegistered) {
 			return;
 		}
 		this.registerCommands();
@@ -60,14 +60,14 @@ class PluginCommands {
 	}
 
 	private async executeExclusiveUpdateCheck(onlyCheckDontUpdate: boolean): Promise<Result<undefined>> {
-		if (this.isUpdateCheckRunning === true) {
+		if (this.isUpdateCheckRunning) {
 			this.showNotice(NOTICE_UPDATE_IN_PROGRESS);
 			return safe.ok(undefined);
 		}
 
 		this.isUpdateCheckRunning = true;
 
-		return await safe.async(async (_$, defer): Promise<undefined> => {
+		return safe.async(async (_$, defer): Promise<undefined> => {
 			defer((): void => {
 				this.isUpdateCheckRunning = false;
 			});
@@ -79,7 +79,7 @@ class PluginCommands {
 				true,
 			);
 
-			if (result.ok === false) {
+			if (!result.ok) {
 				throw result.error;
 			}
 
@@ -95,7 +95,7 @@ class PluginCommands {
 				name: COMMAND_CHECK_AND_UPDATE_NAME,
 				showInRibbon: true,
 				callback: async (): Promise<Result<undefined>> => {
-					return await this.executeExclusiveUpdateCheck(false);
+					return this.executeExclusiveUpdateCheck(false);
 				},
 			},
 			{
@@ -104,7 +104,7 @@ class PluginCommands {
 				name: COMMAND_CHECK_ONLY_NAME,
 				showInRibbon: true,
 				callback: async (): Promise<Result<undefined>> => {
-					return await this.executeExclusiveUpdateCheck(true);
+					return this.executeExclusiveUpdateCheck(true);
 				},
 			},
 			{
@@ -141,12 +141,12 @@ class PluginCommands {
 					const result = item.callback();
 					if (result instanceof Promise) {
 						void result.then((res): void => {
-							if (res.ok === false) {
+							if (!res.ok) {
 								console.error(`${NOTICE_COMMAND_FAILED_PREFIX} ${item.id}`, res.error);
 								this.showNotice(`${NOTICE_COMMAND_FAILED_PREFIX} ${item.id}`);
 							}
 						});
-					} else if (result.ok === false) {
+					} else if (!result.ok) {
 						console.error(`${NOTICE_COMMAND_FAILED_PREFIX} ${item.id}`, result.error);
 						this.showNotice(`${NOTICE_COMMAND_FAILED_PREFIX} ${item.id}`);
 					}
