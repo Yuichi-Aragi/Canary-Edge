@@ -25,7 +25,7 @@ export class PluginUpdateOperation {
 	public constructor(private readonly deps: Readonly<Cradle>) {}
 
 	public dispose(): void {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			return;
 		}
 		this.disposed = true;
@@ -35,7 +35,7 @@ export class PluginUpdateOperation {
 		ctx: OperationContext,
 		options: Readonly<UpdateOptions>,
 	): Promise<Result<UpdateOperationResult>> {
-		return await ctx.safeCtx.async<UpdateOperationResult>(async ($, defer) => {
+		return ctx.safeCtx.async<UpdateOperationResult>(async ($, defer) => {
 			invariant(ctx.repo !== "", "Repository path is required");
 
 			let succeeded = false;
@@ -50,7 +50,6 @@ export class PluginUpdateOperation {
 				guard.cleanup(succeeded);
 			});
 
-			console.info(`[Canary-Edge] [UpdateOperation] [${ctx.repo}] Commencing update check and resolution...`);
 			activeCtx.progress("Resolution", "Checking GitHub for latest release...");
 
 			const remoteRelease = $(
@@ -86,12 +85,9 @@ export class PluginUpdateOperation {
 				this.deps.canaryStore.addDetectedUpdate(detectedUpdate);
 			}
 
-			if (evaluation.isUpdateApplicable === false) {
+			if (!evaluation.isUpdateApplicable) {
 				if (evaluation.status === "update_available") {
 					const localText = localVersion ?? "unknown";
-					console.info(
-						`[Canary-Edge] [UpdateOperation] [${ctx.repo}] Update available (local: v${localText}, remote: v${remoteVersion}).`,
-					);
 					guard.complete(`Update available: v${localText} -> v${remoteVersion}`);
 					succeeded = true;
 					return {
@@ -104,9 +100,6 @@ export class PluginUpdateOperation {
 					};
 				}
 
-				console.info(
-					`[Canary-Edge] [UpdateOperation] [${ctx.repo}] Plugin is up to date (current: v${localVersion ?? remoteVersion}).`,
-				);
 				guard.complete(`Up to date (v${localVersion ?? remoteVersion})`);
 				succeeded = true;
 				return {
@@ -138,8 +131,7 @@ export class PluginUpdateOperation {
 			const shouldProceed = $(
 				await this.deps.pluginChangelogService.promptChangelogBefore(activeCtx, changelogOptions),
 			);
-			if (shouldProceed === false) {
-				console.info(`[Canary-Edge] [UpdateOperation] [${ctx.repo}] Update review cancelled by user.`);
+			if (!shouldProceed) {
 				guard.complete("Cancelled by user");
 				succeeded = true;
 				return {
@@ -150,9 +142,6 @@ export class PluginUpdateOperation {
 				};
 			}
 
-			console.info(
-				`[Canary-Edge] [UpdateOperation] [${ctx.repo}] Downloading update assets for action '${evaluation.status}' (version: '${targetVersion}')...`,
-			);
 			activeCtx.progress("Download", "Downloading release update assets...");
 
 			const prepared = $(
@@ -169,7 +158,6 @@ export class PluginUpdateOperation {
 				}),
 			);
 
-			console.info(`[Canary-Edge] [UpdateOperation] [${ctx.repo}] Deploying update files into vault...`);
 			activeCtx.progress("Deployment", "Writing updated files to vault...");
 
 			const currentSettings = $(await this.deps.settingsService.getSettingsQueued());
@@ -188,7 +176,7 @@ export class PluginUpdateOperation {
 							ctx.progress("Deployment", "Writing updated files to vault...");
 						} else if (phase === "settings" || phase === "manifests") {
 							ctx.progress("Configuration", "Updating plugin settings and manifest...");
-						} else if (phase === "lifecycle") {
+						} else {
 							ctx.progress("Activation", "Reloading plugin instance...");
 						}
 					},
@@ -203,7 +191,6 @@ export class PluginUpdateOperation {
 				localVersion,
 				prepared.manifest.version,
 			);
-			console.info(`[Canary-Edge] [UpdateOperation] [${ctx.repo}] ${completionTelemetry}.`);
 			guard.complete(completionTelemetry);
 			succeeded = true;
 			return {
@@ -221,7 +208,7 @@ export class PluginUpdateOperation {
 		options: Readonly<UpdateOptions>,
 	): UpdateNeedEvaluation {
 		if (localVersion === undefined) {
-			if (options.seeIfUpdatedOnly === true) {
+			if (options.seeIfUpdatedOnly) {
 				return {
 					status: "update_available",
 					isUpdateApplicable: false,
@@ -239,7 +226,7 @@ export class PluginUpdateOperation {
 
 		if (localV === null || remoteV === null) {
 			if (localVersion !== remoteVersion) {
-				if (options.seeIfUpdatedOnly === true) {
+				if (options.seeIfUpdatedOnly) {
 					return {
 						status: "update_available",
 						isUpdateApplicable: false,
@@ -260,7 +247,7 @@ export class PluginUpdateOperation {
 		const comparison = compareVersions(localV, remoteV);
 
 		if (comparison === -1) {
-			if (options.seeIfUpdatedOnly === true) {
+			if (options.seeIfUpdatedOnly) {
 				return {
 					status: "update_available",
 					isUpdateApplicable: false,

@@ -7,21 +7,20 @@ export class PluginDeleteOperation {
 	public constructor(private readonly deps: Readonly<Cradle>) {}
 
 	public dispose(): void {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			return;
 		}
 		this.disposed = true;
 	}
 
 	public async execute(ctx: OperationContext): Promise<Result<undefined>> {
-		return await ctx.safeCtx.async<undefined>(async ($inner) => {
+		return ctx.safeCtx.async<undefined>(async ($inner) => {
 			ctx.progress("Removal", "Removing plugin from configuration...");
 
 			const exists = $inner(this.deps.settingsService.existPluginInList(ctx.repo));
-			if (exists === true) {
+			if (exists) {
 				const settings = $inner(await this.deps.settingsService.getSettingsQueued());
 				$inner(await this.deps.settingsService.removePluginFromList(ctx.repo, settings.version));
-				console.info(`[Canary-Edge] [Workflow] Successfully removed '${ctx.repo}' from Canary Edge plugin list.`);
 				this.deps.workflowNotificationPresenter.notifyUserNotice(
 					`Removed '${ctx.repo}' from Canary Edge list.`,
 					{ timeout: 3 },

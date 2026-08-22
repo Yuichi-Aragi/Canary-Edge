@@ -10,7 +10,7 @@ export class WorkflowNotificationPresenter {
 	public constructor(private readonly deps: Readonly<Cradle>) {}
 
 	public dispose(): void {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			return;
 		}
 		this.disposed = true;
@@ -27,7 +27,7 @@ export class WorkflowNotificationPresenter {
 		switch (action) {
 			case "installed": {
 				let installMsg = `${repo} (v${version})\nSuccessfully installed.`;
-				if (effectiveEnableAfterInstall === false) {
+				if (!effectiveEnableAfterInstall) {
 					installMsg = `${installMsg} Enable it in Community Plugins.`;
 				}
 				this.notifyUserNotice(installMsg, {}, $inner);
@@ -72,8 +72,7 @@ export class WorkflowNotificationPresenter {
 
 		switch (updateStatus) {
 			case "up_to_date": {
-				if (reportIfNotUpdated === true) {
-					console.info(`[Canary-Edge] [Workflow] No update available for '${repo}'`);
+				if (reportIfNotUpdated) {
 					$inner(
 						this.deps.notificationService.show(
 							`No update available for ${repo} (v${version ?? "latest"})`,
@@ -89,7 +88,6 @@ export class WorkflowNotificationPresenter {
 					const { local, remote } = updateAvailableDetails;
 					const updateAvailableMsg = `Update available for ${repo}: ${local} -> ${remote}`;
 					const url = `https://github.com/${repo}/releases/tag/${remote}`;
-					console.info(`[Canary-Edge] [Workflow] ${updateAvailableMsg} (Release Info: ${url})`);
 					$inner(
 						this.deps.notificationService.show(
 							updateAvailableMsg,
@@ -143,7 +141,6 @@ export class WorkflowNotificationPresenter {
 		options: Readonly<Record<string, unknown>> = {},
 		$inner?: Unwrapper<Error>,
 	): void {
-		console.info(`[Canary-Edge] [Workflow] ${message}`);
 		const showResult = this.deps.notificationService.show(message, options, "info");
 		if ($inner !== undefined) {
 			$inner(showResult);
@@ -154,7 +151,7 @@ export class WorkflowNotificationPresenter {
 		return this.safeCtx(($): undefined => {
 			const errorMessage = error instanceof Error ? error.message : String(error);
 
-			if (errorMessage.startsWith("Busy:") === true) {
+			if (errorMessage.startsWith("Busy:")) {
 				console.warn(`[Canary-Edge] [Workflow] Operation deferred (busy): ${errorMessage}`);
 				return undefined;
 			}
@@ -171,7 +168,7 @@ export class WorkflowNotificationPresenter {
 		failureContext: string,
 		$inner: Unwrapper<Error>,
 	): T {
-		if (resultObj.ok === false) {
+		if (!resultObj.ok) {
 			this.deps.operationTrackingService.fail(scrubbedRepo, resultObj.error);
 			$inner(this.handleWorkflowError(scrubbedRepo, resultObj.error, failureContext));
 			const err = resultObj.error instanceof Error ? resultObj.error : new Error(String(resultObj.error));

@@ -7,7 +7,7 @@ export class PluginRegisterOperation {
 	public constructor(private readonly deps: Readonly<Cradle>) {}
 
 	public dispose(): void {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			return;
 		}
 		this.disposed = true;
@@ -17,7 +17,7 @@ export class PluginRegisterOperation {
 		ctx: OperationContext,
 		options: Readonly<{ readonly releaseChannel?: ReleaseChannel | undefined }>,
 	): Promise<Result<boolean>> {
-		return await ctx.safeCtx.async<boolean>(async ($inner) => {
+		return ctx.safeCtx.async<boolean>(async ($inner) => {
 			const { releaseChannel } = options;
 			ctx.progress("Registration", "Awaiting registration confirmation...");
 
@@ -27,7 +27,7 @@ export class PluginRegisterOperation {
 				channel: releaseChannel,
 			});
 
-			if (confirmRes.ok === false) {
+			if (!confirmRes.ok) {
 				console.error(
 					`[Canary-Edge] [Workflow] Registration confirmation rejected or failed for '${ctx.repo}':`,
 					confirmRes.error,
@@ -35,8 +35,7 @@ export class PluginRegisterOperation {
 				throw confirmRes.error;
 			}
 
-			if (confirmRes.value === false) {
-				console.info(`[Canary-Edge] [Workflow] Registration cancelled by user for '${ctx.repo}'.`);
+			if (!confirmRes.value) {
 				if (ctx.guard !== undefined) {
 					ctx.guard.complete("Cancelled by user");
 				}

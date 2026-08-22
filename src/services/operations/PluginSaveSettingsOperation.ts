@@ -9,7 +9,7 @@ export class PluginSaveSettingsOperation {
 	public constructor(private readonly deps: Readonly<Cradle>) {}
 
 	public dispose(): void {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			return;
 		}
 		this.disposed = true;
@@ -19,7 +19,7 @@ export class PluginSaveSettingsOperation {
 		ctx: OperationContext,
 		options: Readonly<SavePluginSettingsOptions>,
 	): Promise<Result<undefined>> {
-		return await ctx.safeCtx.async<undefined>(async ($inner) => {
+		return ctx.safeCtx.async<undefined>(async ($inner) => {
 			const { isFrozen, privateApiKeySecretId, enableAfterInstall, isIncompatible = false, overrides } = options;
 
 			ctx.progress("Configuration", "Persisting plugin settings...");
@@ -28,11 +28,13 @@ export class PluginSaveSettingsOperation {
 			$inner(
 				await this.deps.settingsService.addPluginToList(
 					ctx.repo,
-					isFrozen,
-					privateApiKeySecretId,
-					isIncompatible,
-					overrides,
-					false,
+					{
+						isFrozen,
+						privateApiKeySecretId,
+						isIncompatible,
+						overrides,
+						mergeWithExisting: false,
+					},
 					settings.version,
 				),
 			);
@@ -47,8 +49,8 @@ export class PluginSaveSettingsOperation {
 				);
 
 				let statusText = "disabled";
-				if (enableAfterInstall === true) {
-					if (wasReloaded === true) {
+				if (enableAfterInstall) {
+					if (wasReloaded) {
 						statusText = "reloaded";
 					} else {
 						statusText = "enabled";

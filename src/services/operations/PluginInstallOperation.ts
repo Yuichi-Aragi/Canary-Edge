@@ -19,13 +19,21 @@ interface InstallationCheckResult {
 	readonly context: Readonly<ValidationContext>;
 }
 
+interface PerformInstallParams {
+	readonly ctx: OperationContext;
+	readonly options: Readonly<InstallOptions>;
+	readonly action: PluginLifecycleAction;
+	readonly validation: Readonly<ValidationContext>;
+	readonly localManifest: PluginManifest | null;
+}
+
 export class PluginInstallOperation {
 	private disposed = false;
 
 	public constructor(private readonly deps: Readonly<Cradle>) {}
 
 	public dispose(): void {
-		if (this.disposed === true) {
+		if (this.disposed) {
 			return;
 		}
 		this.disposed = true;
@@ -35,7 +43,7 @@ export class PluginInstallOperation {
 		ctx: OperationContext,
 		options: Readonly<InstallOptions>,
 	): Promise<Result<InstallOperationResult>> {
-		return await ctx.safeCtx.async<InstallOperationResult>(async ($, defer) => {
+		return ctx.safeCtx.async<InstallOperationResult>(async ($, defer) => {
 			invariant(ctx.repo !== "", "Repository path is required");
 
 			let succeeded = false;
@@ -50,7 +58,6 @@ export class PluginInstallOperation {
 				guard.cleanup(succeeded);
 			});
 
-			console.info(`[Canary-Edge] [InstallOperation] [${ctx.repo}] Commencing installation workflow...`);
 			activeCtx.progress("Verification", "Checking local installation state...");
 
 			const checkRes = $(await this.inspectInstallationState(activeCtx, options));
@@ -59,9 +66,6 @@ export class PluginInstallOperation {
 			const previousVersion = localManifest?.version;
 
 			if (action === "unchanged") {
-				console.info(
-					`[Canary-Edge] [InstallOperation] [${ctx.repo}] Plugin is already installed at target version (v${targetVersion}). Synchronizing settings...`,
-				);
 				$(await this.syncSettingsOnly(activeCtx, options, validation.manifest.id));
 				guard.complete(`Already installed (v${targetVersion})`);
 				succeeded = true;
@@ -73,9 +77,17 @@ export class PluginInstallOperation {
 				};
 			}
 
-			const result = $(await this.performInstall(activeCtx, options, action, validation, localManifest));
+			const result = $(
+				await this.performInstall({
+					ctx: activeCtx,
+					options,
+					action,
+					validation,
+					localManifest,
+				}),
+			);
 
-			if (result.wasInstalled === true) {
+			if (result.wasInstalled) {
 				this.deps.canaryStore.clearDetectedUpdates(ctx.repo);
 			}
 
@@ -90,7 +102,7 @@ export class PluginInstallOperation {
 		ctx: OperationContext,
 		options: Readonly<InstallOptions>,
 	): Promise<Result<InstallationCheckResult>> {
-		return await ctx.safeCtx.async<InstallationCheckResult>(async ($) => {
+		return ctx.safeCtx.async<InstallationCheckResult>(async ($) => {
 			const validation = $(
 				await this.deps.repositoryService.validateAndFetchManifest(
 					ctx,
@@ -114,7 +126,7 @@ export class PluginInstallOperation {
 			const localVersionParsed = coerceVersion(localManifest.version, { includePrerelease: true, loose: true });
 			const remoteVersionParsed = coerceVersion(validation.manifest.version, { includePrerelease: true, loose: true });
 
-			if (options.forceReinstall === true) {
+			if (options.forceReinstall) {
 				if (localVersionParsed !== null && remoteVersionParsed !== null) {
 					const cmp = compareVersions(localVersionParsed, remoteVersionParsed);
 					if (cmp === -1) {
@@ -151,7 +163,7 @@ export class PluginInstallOperation {
 		options: Readonly<InstallOptions>,
 		pluginId: string,
 	): Promise<Result<undefined>> {
-		return await ctx.safeCtx.async<undefined>(async ($) => {
+		return ctx.safeCtx.async<undefined>(async ($) => {
 			ctx.progress("Configuration", "Updating configuration settings...");
 
 			const settings = $(await this.deps.settingsService.getSettingsQueued());
@@ -161,7 +173,7 @@ export class PluginInstallOperation {
 				pluginId !== "" ? $(await this.deps.pluginQueryService.getLocalManifest(pluginId, ctx.safeCtx)) : null;
 			if (localManifest !== null) {
 				const compat = $(this.deps.pluginCompatibilityService.checkOverallCompatibility(localManifest, ctx));
-				isIncompatible = compat.isCompatible === false;
+				isIncompatible = !compat.isCompatible;
 			}
 
 			$(
@@ -188,13 +200,10 @@ export class PluginInstallOperation {
 	}
 
 	private async performInstall(
-		ctx: OperationContext,
-		options: Readonly<InstallOptions>,
-		action: PluginLifecycleAction,
-		validation: Readonly<ValidationContext>,
-		localManifest: PluginManifest | null,
+		params: Readonly<PerformInstallParams>,
 	): Promise<Result<InstallOperationResult>> {
-		return await ctx.safeCtx.async<InstallOperationResult>(async ($) => {
+		const { ctx, options, action, validation, localManifest } = params;
+		return ctx.safeCtx.async<InstallOperationResult>(async ($) => {
 			const targetVersion = validation.manifest.version;
 			const previousVersion = localManifest?.version;
 			const config = $(this.deps.settingsService.getPluginConfiguration(ctx.repo));
@@ -214,7 +223,7 @@ export class PluginInstallOperation {
 			}
 
 			const shouldProceed = $(await this.deps.pluginChangelogService.promptChangelogBefore(ctx, changelogOptions));
-			if (shouldProceed === false) {
+			if (!shouldProceed) {
 				return {
 					wasInstalled: false,
 					action: "unchanged",
@@ -223,9 +232,6 @@ export class PluginInstallOperation {
 				};
 			}
 
-			console.info(
-				`[Canary-Edge] [InstallOperation] [${ctx.repo}] Downloading release assets for action '${action}' (target: v${targetVersion})...`,
-			);
 			ctx.progress("Download", "Downloading plugin release assets...");
 
 			const release = $(
@@ -242,7 +248,6 @@ export class PluginInstallOperation {
 				}),
 			);
 
-			console.info(`[Canary-Edge] [InstallOperation] [${ctx.repo}] Deploying release assets to vault...`);
 			ctx.progress("Deployment", "Writing plugin files to vault...");
 
 			const settings = $(await this.deps.settingsService.getSettingsQueued());
@@ -261,7 +266,7 @@ export class PluginInstallOperation {
 							ctx.progress("Deployment", "Writing plugin files to vault...");
 						} else if (phase === "settings" || phase === "manifests") {
 							ctx.progress("Configuration", "Updating plugin settings and manifest...");
-						} else if (phase === "lifecycle") {
+						} else {
 							ctx.progress("Activation", "Activating plugin instance...");
 						}
 					},
@@ -270,9 +275,6 @@ export class PluginInstallOperation {
 
 			await this.deps.pluginChangelogService.notifyChangelogAfter(ctx, changelogOptions);
 
-			console.info(
-				`[Canary-Edge] [InstallOperation] [${ctx.repo}] Operation '${action}' finished successfully (version: ${release.manifest.version}).`,
-			);
 			return {
 				wasInstalled: true,
 				action,
