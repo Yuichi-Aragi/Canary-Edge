@@ -1,30 +1,30 @@
-import { Controller, useController } from "react-hook-form";
 import { lazy, type JSX } from "react";
+import { Controller, useController } from "react-hook-form";
 import { match } from "ts-pattern";
 
-import { useInstallPluginViewModel } from "@/ui/hooks/useInstallPluginViewModel";
 import { Button } from "@/ui/components/BaseComponents";
-import { Icon } from "@/ui/components/Icon";
-import { PluginCard } from "@/ui/components/PluginCard";
 import { CanaryErrorBoundary } from "@/ui/components/CanaryErrorBoundary";
 import { CategorySelector } from "@/ui/components/CategorySelector";
+import { Icon } from "@/ui/components/Icon";
+import { LazyPanelBoundary } from "@/ui/components/LazyPanelBoundary";
+import { PluginCard } from "@/ui/components/PluginCard";
 import {
+	SharedAutomationTab,
 	SharedGeneralTab,
 	SharedUpdateRulesTab,
-	SharedAutomationTab,
 } from "@/ui/components/SharedSettingsTabs";
-import { LazyPanelBoundary } from "@/ui/components/LazyPanelBoundary";
+import { useInstallPluginViewModel } from "@/ui/hooks/useInstallPluginViewModel";
 
 import type { Control } from "react-hook-form";
+import type { InstallPluginFormData } from "@/domain/schemas";
 import type {
 	ChangelogPriority,
 	InstallPluginModalOptions,
 	ShowChangelogMode,
 } from "@/domain/types";
-import type { InstallPluginFormData } from "@/domain/schemas";
 import type {
-	InstallPluginViewState,
 	InstallPluginViewActions,
+	InstallPluginViewState,
 } from "@/ui/hooks/useInstallPluginViewModel";
 
 const LazySharedReadmeTab = lazy(async () => {
@@ -59,7 +59,7 @@ function InstallPluginGeneralTab({
 	const { field: forceVersionField } = useController({ control, name: "forceInstall.version" });
 	const { field: forcePlatformField } = useController({ control, name: "forceInstall.platform" });
 
-	const isBusy = isVersionsSuccess === false || isConflict === true;
+	const isBusy = !isVersionsSuccess || isConflict;
 
 	return (
 		<SharedGeneralTab
@@ -79,7 +79,7 @@ function InstallPluginGeneralTab({
 			onForcePlatformChange={forcePlatformField.onChange}
 			onForceVersionChange={forceVersionField.onChange}
 			onFrozenChange={(v: boolean): void => {
-				statusField.onChange(v === true ? "frozen" : "active");
+				statusField.onChange(v ? "frozen" : "active");
 			}}
 			onShowChangelogModeChange={(mode: ShowChangelogMode): void => {
 				showChangelogField.onChange({
@@ -107,7 +107,7 @@ function InstallPluginUpdateRulesTab({
 
 	return (
 		<SharedUpdateRulesTab
-			isBusy={isVersionsSuccess === false || isConflict === true}
+			isBusy={!isVersionsSuccess || isConflict}
 			isFrozen={statusField.value === "frozen"}
 			releaseChannel={releaseChannelField.value}
 			onReleaseChannelChange={releaseChannelField.onChange}
@@ -205,15 +205,15 @@ function InstallPluginViewContent({ state, actions, onClose }: InstallPluginView
 	} = actions;
 
 	const isAddDisabled =
-		isFormValid === false ||
-		isVersionsSuccess === false ||
-		isPending === true ||
-		isConflict === true ||
-		isAlreadyTracked === true;
+		!isFormValid ||
+		!isVersionsSuccess ||
+		isPending ||
+		isConflict ||
+		isAlreadyTracked;
 
 	return (
 		<>
-			{shouldShowPreviewCard === true ? (
+			{shouldShowPreviewCard ? (
 				<div className="ce-dashboard-card-wrapper mod-spaced">
 					<CanaryErrorBoundary variant="card">
 						<PluginCard
@@ -253,7 +253,7 @@ function InstallPluginViewContent({ state, actions, onClose }: InstallPluginView
 										autoComplete="off"
 										autoCorrect="off"
 										className="ce-inline-input"
-										disabled={isConflict === true}
+										disabled={isConflict}
 										placeholder="Repository (Owner/Repo, GitHub URL, or gh:Owner/Repo)"
 										spellCheck={false}
 										type="text"
@@ -289,11 +289,17 @@ function InstallPluginViewContent({ state, actions, onClose }: InstallPluginView
 			</div>
 
 			<div className="ce-dashboard-card-wrapper mod-settings-panel">
-				<form id="ce-install-plugin-form" className="ce-settings-grid" onSubmit={handleSubmit(onSubmit)}>
+				<form
+					id="ce-install-plugin-form"
+					className="ce-settings-grid"
+					onSubmit={(e): void => {
+						void handleSubmit(onSubmit)(e);
+					}}
+				>
 					<CategorySelector
 						activeCategory={activeCategory}
 						categories={categories}
-						isDisabled={isConflict === true}
+						isDisabled={isConflict}
 						onCategoryChange={setActiveCategory}
 					/>
 
@@ -343,7 +349,7 @@ function InstallPluginViewContent({ state, actions, onClose }: InstallPluginView
 									<LazySharedReadmeTab
 										isEnabled={activeCategory === "README"}
 										repoUrl={watchedRepo}
-										tokenSecretId={watchedUseToken === true ? watchedTokenId : undefined}
+										tokenSecretId={watchedUseToken ? watchedTokenId : undefined}
 									/>
 								</LazyPanelBoundary>
 							))
@@ -352,14 +358,14 @@ function InstallPluginViewContent({ state, actions, onClose }: InstallPluginView
 				</form>
 			</div>
 
-			{activeCategory === "Version & Auth" && isVersionsSuccess === true && watchedRepo.trim() !== "" ? (
+			{activeCategory === "Version & Auth" && isVersionsSuccess && watchedRepo.trim() !== "" ? (
 				<LazyPanelBoundary loadingMessage="Loading release changelog...">
 					<LazyPluginVersionChangelogPreview
 						hideCard
 						channel={watchedReleaseChannel}
 						priority={watchedShowChangelog.priority}
 						repoUrl={watchedRepo}
-						tokenSecretId={watchedUseToken === true ? watchedTokenId : undefined}
+						tokenSecretId={watchedUseToken ? watchedTokenId : undefined}
 						version={previewVersion}
 					/>
 				</LazyPanelBoundary>
@@ -377,7 +383,9 @@ function InstallPluginViewContent({ state, actions, onClose }: InstallPluginView
 							disabled={isAddDisabled}
 							text="Install"
 							variant="cta"
-							onClick={handleSubmit(onSubmit)}
+							onClick={(): void => {
+								void handleSubmit(onSubmit)();
+							}}
 						/>
 					</div>
 				</div>

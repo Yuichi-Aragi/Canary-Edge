@@ -71,13 +71,13 @@ function PluginGeneralSettingsTab({
 	return (
 		<SharedGeneralTab
 			autoEnable={config.autoEnable ?? globalSettings.global.autoEnable}
-			autoEnableHint={<>Global Default: <strong>{globalSettings.global.autoEnable === true ? "Enabled" : "Disabled"}</strong></>}
+			autoEnableHint={<>Global Default: <strong>{globalSettings.global.autoEnable ? "Enabled" : "Disabled"}</strong></>}
 			changelogPriorityHint={<>Global Default: <strong>{globalChangelogPriorityText}</strong></>}
 			forcePlatform={config.forceInstall?.platform ?? globalSettings.global.forceInstall.platform}
-			forcePlatformHint={<>Global Default: <strong>{globalSettings.global.forceInstall.platform === true ? "Allowed" : "Blocked"}</strong></>}
+			forcePlatformHint={<>Global Default: <strong>{globalSettings.global.forceInstall.platform ? "Allowed" : "Blocked"}</strong></>}
 			forceVersion={config.forceInstall?.version ?? globalSettings.global.forceInstall.version}
-			forceVersionHint={<>Global Default: <strong>{globalSettings.global.forceInstall.version === true ? "Allowed" : "Blocked"}</strong></>}
-			frozenHint={<>Status: <strong>{isFrozen === true ? "Frozen" : "Unfrozen"}</strong></>}
+			forceVersionHint={<>Global Default: <strong>{globalSettings.global.forceInstall.version ? "Allowed" : "Blocked"}</strong></>}
+			frozenHint={<>Status: <strong>{isFrozen ? "Frozen" : "Unfrozen"}</strong></>}
 			isBusy={isBusy}
 			isFrozen={isFrozen}
 			showChangelog={effectiveShowChangelog}
@@ -95,7 +95,7 @@ function PluginGeneralSettingsTab({
 				updateForceInstall("version", v);
 			}}
 			onFrozenChange={(v: boolean): void => {
-				if (isBusy === false) {
+				if (!isBusy) {
 					setIsFrozen(v);
 				}
 			}}
@@ -196,7 +196,7 @@ export function PluginSettingsView(props: PluginSettingsViewProps): JSX.Element 
 				onCategoryChange={actions.setActiveCategory}
 			/>
 
-			<div className={clsx("ce-settings-grid", state.isBusy === true ? "is-locked" : "")}>
+			<div className={clsx("ce-settings-grid", state.isBusy ? "is-locked" : "")}>
 				{match(state.activeCategory)
 					.with("General", (): JSX.Element => (
 						<PluginGeneralSettingsTab
