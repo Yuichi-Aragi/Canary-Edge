@@ -63,7 +63,7 @@ function chainPromptResolvers(
 			});
 			originalResolve(value);
 		});
-		if (res.ok === false) {
+		if (!res.ok) {
 			console.error("Error executing chained prompt resolve callback:", res.error);
 		}
 	};
@@ -74,7 +74,7 @@ function safelyResolvePrompts(prompts: readonly ActivePrompt[], value = false): 
 		const resolveRes = safe.try((): void => {
 			item.request.resolve(value);
 		});
-		if (resolveRes.ok === false) {
+		if (!resolveRes.ok) {
 			console.error("Error resolving prompt callback:", resolveRes.error);
 		}
 	}
@@ -363,7 +363,7 @@ export class CanaryStore {
 			toggleDashboardFilter: action((state, payload): void => {
 				const current = state.ui.activeDashboardFilters;
 				if (payload === "installing") {
-					if (current.includes("installing") === true) {
+					if (current.includes("installing")) {
 						state.ui.activeDashboardFilters = current.filter((f): boolean => {
 							return f !== "installing";
 						});
@@ -374,7 +374,7 @@ export class CanaryStore {
 				}
 
 				if (payload === "untracked") {
-					if (current.includes("untracked") === true) {
+					if (current.includes("untracked")) {
 						state.ui.activeDashboardFilters = current.filter((f): boolean => {
 							return f !== "untracked";
 						});
@@ -388,7 +388,7 @@ export class CanaryStore {
 					return f !== "installing" && f !== "untracked";
 				});
 
-				if (withoutExclusive.includes(payload) === true) {
+				if (withoutExclusive.includes(payload)) {
 					state.ui.activeDashboardFilters = withoutExclusive.filter((f): boolean => {
 						return f !== payload;
 					});
