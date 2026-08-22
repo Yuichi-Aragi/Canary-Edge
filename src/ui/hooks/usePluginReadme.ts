@@ -30,7 +30,7 @@ export function usePluginReadme(
 
 			let rawMarkdown: string;
 
-			if (anonRes.ok === true) {
+			if (anonRes.ok) {
 				rawMarkdown = anonRes.value;
 			} else {
 				const effectiveTokenRes = settingsService.getEffectiveTokenForRepo(scrubbedRepo, localTokenSecretId);
@@ -38,7 +38,7 @@ export function usePluginReadme(
 
 				if (effectiveToken !== "") {
 					const tokenRes = await gitHubContentService.fetchReadme(scrubbedRepo, effectiveToken);
-					if (tokenRes.ok === false) {
+					if (!tokenRes.ok) {
 						throw tokenRes.error;
 					}
 					rawMarkdown = tokenRes.value;
@@ -48,7 +48,7 @@ export function usePluginReadme(
 			}
 
 			const rewriteRes = rewriteMdResourceUrls(rawMarkdown, scrubbedRepo, "HEAD");
-			if (rewriteRes.ok === false) {
+			if (!rewriteRes.ok) {
 				return rawMarkdown;
 			}
 

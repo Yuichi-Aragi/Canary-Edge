@@ -74,7 +74,7 @@ export function useDashboardFilters({
 	});
 
 	useEffect((): void => {
-		if (rawActiveFilters.includes("installing") === true && activeInstallations.length === 0) {
+		if (rawActiveFilters.includes("installing") && activeInstallations.length === 0) {
 			const nextFilters = rawActiveFilters.filter((f): boolean => {
 				return f !== "installing";
 			});
@@ -128,9 +128,7 @@ export function useDashboardFilters({
 		gcTime: 1000 * 60 * 30,
 	});
 
-	const isInitialInstalledLoading = isInstalledPluginsLoading && installedPluginsData === undefined;
-	const isInitialMappingsLoading = isMappingsLoading && mappings === undefined;
-	const isInitialLoading = isInitialInstalledLoading || isInitialMappingsLoading;
+	const isInitialLoading = isInstalledPluginsLoading || isMappingsLoading;
 	const isRefetching = isInstalledPluginsFetching || isMappingsFetching;
 
 	const trackedIdentifiersSet = useMemo((): ReadonlySet<string> => {
@@ -186,11 +184,11 @@ export function useDashboardFilters({
 	);
 
 	const untrackedPlugins = useMemo((): readonly PluginManifest[] => {
-		if (isInitialLoading === true && installedPlugins.length === 0) {
+		if (isInitialLoading && installedPlugins.length === 0) {
 			return [];
 		}
 		return installedPlugins.filter((manifest): boolean => {
-			return isTracked(manifest.id) === false;
+			return !isTracked(manifest.id);
 		});
 	}, [installedPlugins, isTracked, isInitialLoading]);
 
@@ -212,7 +210,7 @@ export function useDashboardFilters({
 			});
 		}
 
-		if (isInitialLoading === true && installedPlugins.length === 0 && Object.keys(settings.plugins).length === 0) {
+		if (isInitialLoading && installedPlugins.length === 0 && Object.keys(settings.plugins).length === 0) {
 			return [];
 		}
 
@@ -253,7 +251,7 @@ export function useDashboardFilters({
 			});
 		}
 
-		if (isInitialLoading === true && searchableItems.length === 0) {
+		if (isInitialLoading && searchableItems.length === 0) {
 			return [];
 		}
 

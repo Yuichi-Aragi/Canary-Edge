@@ -7,7 +7,7 @@ const activeLocks = new Set<string>();
 
 function updateBodyClass(): void {
 	const res = safe.try((): void => {
-		if (typeof activeDocument === "undefined" || activeDocument.body === null) {
+		if (typeof activeDocument === "undefined") {
 			return;
 		}
 		if (activeLocks.size > 0) {
@@ -17,7 +17,7 @@ function updateBodyClass(): void {
 		}
 	});
 
-	if (res.ok === false) {
+	if (!res.ok) {
 		console.error("Failed to update workspace menu lock body class:", res.error);
 	}
 }
@@ -29,7 +29,7 @@ export function useWorkspaceMenuLock(isOpen: boolean): void {
 		idRef.current = idRef.current ?? uuidv4();
 		const lockId = idRef.current;
 
-		if (isOpen === true) {
+		if (isOpen) {
 			activeLocks.add(lockId);
 			updateBodyClass();
 		} else {

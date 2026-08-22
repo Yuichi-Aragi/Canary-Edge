@@ -8,7 +8,7 @@ function isDepsChanged(prevDeps: DependencyList | undefined, nextDeps: Dependenc
 		return true;
 	}
 	for (let i = 0; i < prevDeps.length; i++) {
-		if (Object.is(prevDeps[i], nextDeps[i]) === false) {
+		if (!Object.is(prevDeps[i], nextDeps[i])) {
 			return true;
 		}
 	}
@@ -23,7 +23,7 @@ export function useUpdateEffect(effect: EffectCallback, deps?: DependencyList): 
 	useEffect((): ReturnType<EffectCallback> => {
 		effectRef.current = effect;
 
-		if (isMountedRef.current === false) {
+		if (!isMountedRef.current) {
 			isMountedRef.current = true;
 			prevDepsRef.current = deps;
 			return undefined;

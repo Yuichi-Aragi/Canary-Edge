@@ -71,7 +71,7 @@ export function usePluginValidation({
 	const sessionCounterRef = useRef<number>(initialHasPrefill ? 1 : 0);
 
 	const [validationTarget, setValidationTarget] = useState<ValidationTarget | null>((): ValidationTarget | null => {
-		if (initialHasPrefill === true && initialScrubbedPrefill !== "") {
+		if (initialHasPrefill && initialScrubbedPrefill !== "") {
 			return {
 				repo: initialScrubbedPrefill,
 				tokenSecretId: watchedUseToken ? watchedTokenId : undefined,
@@ -147,7 +147,7 @@ export function usePluginValidation({
 				await assertInternetConnection();
 			});
 
-			if (onlineRes.ok === false) {
+			if (!onlineRes.ok) {
 				const offlineMsg = getFriendlyErrorMessage(onlineRes.error);
 				setLastErrorMessage(offlineMsg);
 				canaryToast.error(offlineMsg);
@@ -158,11 +158,11 @@ export function usePluginValidation({
 			setValue("repositoryUrl", scrubbed, { shouldValidate: true });
 
 			const formatValidationResult = await safe.tryAsync(async (): Promise<boolean> => {
-				return await trigger("repositoryUrl");
+				return trigger("repositoryUrl");
 			});
 
 			const isFormatValid = safe.unwrapOr(formatValidationResult, false);
-			if (isFormatValid === false) {
+			if (!isFormatValid) {
 				return false;
 			}
 
@@ -182,7 +182,7 @@ export function usePluginValidation({
 
 					const queryResult = await safe.tryAsync(
 						async (): Promise<QueryObserverResult<ReleaseVersion[]>> => {
-							return await refetchVersions();
+							return refetchVersions();
 						},
 					);
 
@@ -191,16 +191,16 @@ export function usePluginValidation({
 						return;
 					}
 
-					if (queryResult.ok === false) {
+					if (!queryResult.ok) {
 						const friendlyMsg = getFriendlyErrorMessage(queryResult.error);
 						setLastErrorMessage(friendlyMsg);
 						canaryToast.error(friendlyMsg);
 						validationSucceeded = false;
-					} else if (queryResult.value.isSuccess === true) {
+					} else if (queryResult.value.isSuccess) {
 						setLastErrorMessage(null);
 						canaryToast.success(`Repository validated: ${scrubbed}`);
 						validationSucceeded = true;
-					} else if (queryResult.value.isError === true) {
+					} else if (queryResult.value.isError) {
 						const friendlyMsg = getFriendlyErrorMessage(queryResult.value.error);
 						setLastErrorMessage(friendlyMsg);
 						canaryToast.error(friendlyMsg);
@@ -236,7 +236,7 @@ export function usePluginValidation({
 			await assertInternetConnection();
 		});
 
-		if (onlineRes.ok === false) {
+		if (!onlineRes.ok) {
 			const offlineMsg = getFriendlyErrorMessage(onlineRes.error);
 			canaryToast.error(offlineMsg);
 			return false;
@@ -249,7 +249,7 @@ export function usePluginValidation({
 				enableTokenValidation();
 				const result = await safe.tryAsync(
 					async (): Promise<QueryObserverResult<GitHubTokenInfo | null>> => {
-						return await refetchToken();
+						return refetchToken();
 					},
 				);
 
@@ -258,10 +258,10 @@ export function usePluginValidation({
 					return;
 				}
 
-				if (result.ok === false) {
+				if (!result.ok) {
 					canaryToast.error("Token validation failed due to network or internal error.");
 					tokenValid = false;
-				} else if (result.value.isSuccess === true && result.value.data?.validToken === true) {
+				} else if (result.value.isSuccess && result.value.data?.validToken === true) {
 					canaryToast.success("Token validated successfully.");
 					tokenValid = true;
 				} else {
@@ -282,19 +282,19 @@ export function usePluginValidation({
 		if (watchedRepo.trim() === "") {
 			return "idle_empty";
 		}
-		if (shouldValidateRepo === false) {
+		if (!shouldValidateRepo) {
 			return "idle_unvalidated";
 		}
-		if (isLoadingVersions === true) {
+		if (isLoadingVersions) {
 			return "validating_repo";
 		}
-		if (isValidatingToken === true) {
+		if (isValidatingToken) {
 			return "validating_token";
 		}
-		if (isVersionsError === true || lastErrorMessage !== null) {
+		if (isVersionsError || lastErrorMessage !== null) {
 			return "error";
 		}
-		if (isVersionsSuccess === true) {
+		if (isVersionsSuccess) {
 			return "success";
 		}
 		return "idle_unvalidated";
@@ -318,7 +318,7 @@ export function usePluginValidation({
 				if (lastErrorMessage !== null) {
 					return lastErrorMessage;
 				}
-				if (versionsError !== null && versionsError !== undefined) {
+				if (versionsError !== null) {
 					return getFriendlyErrorMessage(versionsError);
 				}
 				return "Validation failed. Check repository name and token permissions.";

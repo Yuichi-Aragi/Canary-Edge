@@ -74,7 +74,7 @@ function searchStringList(
 
 		const results = miniSearch.search(cleanQuery, {
 			prefix: true,
-			fuzzy: enableFuzzy === true ? (term: string): number | false => {
+			fuzzy: enableFuzzy ? (term: string): number | false => {
 				return term.length >= 3 ? 0.2 : false;
 			} : false,
 			combineWith: "AND",
@@ -122,11 +122,9 @@ export function useSecretSelectorViewModel(
 		return rawOptions;
 	}, [rawOptions]);
 
-	const showNone = true;
-
 	const listData = useMemo((): readonly string[] => {
-		return showNone === true ? ["", ...filteredOptions] : filteredOptions;
-	}, [showNone, filteredOptions]);
+		return ["", ...filteredOptions];
+	}, [filteredOptions]);
 
 	const getItemId = useCallback((item: string): string => {
 		return item;
@@ -167,7 +165,7 @@ export function useSecretSelectorViewModel(
 	}, [deferredQuery]);
 
 	const effectiveListData = useMemo((): readonly string[] => {
-		return effectiveShowNone === true ? ["", ...searchFilteredOptions] : searchFilteredOptions;
+		return effectiveShowNone ? ["", ...searchFilteredOptions] : searchFilteredOptions;
 	}, [effectiveShowNone, searchFilteredOptions]);
 
 	const handleOpenModal = useCallback((): void => {

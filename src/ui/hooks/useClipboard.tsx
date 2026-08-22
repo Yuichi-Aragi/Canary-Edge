@@ -25,12 +25,12 @@ export function useClipboard(): {
 					return navigator.clipboard.writeText(text);
 				});
 
-				if (res.ok === false) {
+				if (!res.ok) {
 					console.error(`Failed to copy ${label} to clipboard`, res.error);
-					if (silent === false) {
+					if (!silent) {
 						canaryToast.error(`Failed to copy ${label}`);
 					}
-				} else if (silent === false) {
+				} else if (!silent) {
 					const description = text.length > 50 ? `${text.slice(0, 47)}...` : text;
 					canaryToast.success(`Copied ${label} to clipboard`, {
 						description,

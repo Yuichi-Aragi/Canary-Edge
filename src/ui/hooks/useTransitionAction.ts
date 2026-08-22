@@ -37,7 +37,7 @@ export function useTransitionAction(
 						await callback();
 					});
 
-					if (res.ok === false) {
+					if (!res.ok) {
 						console.error("[useTransitionAction] Transition execution failed:", res.error);
 					}
 				});

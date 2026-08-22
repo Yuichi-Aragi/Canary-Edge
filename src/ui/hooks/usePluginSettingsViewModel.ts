@@ -125,7 +125,7 @@ function computeVersionState(
 	const isDowngrade = comparison === -1;
 
 	let installButtonText = "Reinstall";
-	if (isDowngrade === true) {
+	if (isDowngrade) {
 		installButtonText = "Downgrade";
 	} else if (comparison === 1) {
 		installButtonText = "Upgrade";
@@ -166,7 +166,7 @@ export function usePluginSettingsViewModel(
 	const { activeCategory, setActiveCategory } = useCategoryTab<PluginSettingCategory>("General");
 	const { installPlugin } = usePluginOperations();
 
-	const isBusy = isLockedActive === true || installPlugin.isPending === true || isSaving === true || isTransitionPending === true;
+	const isBusy = isLockedActive || installPlugin.isPending || isSaving || isTransitionPending;
 
 	const secretOptions = useMemo((): readonly string[] => {
 		return getAvailableSecrets(mainPlugin.app);
@@ -244,7 +244,7 @@ export function usePluginSettingsViewModel(
 					{
 						repo,
 						version: versionState.resolvedVersion,
-						isFrozen: versionState.isDowngrade === true ? true : isFrozen,
+						isFrozen: versionState.isDowngrade ? true : isFrozen,
 						tokenSecretId: tokenSecretId !== "" ? tokenSecretId : undefined,
 						enableAfterInstall: config.autoEnable ?? settings.global.autoEnable,
 						forceReinstall: true,
@@ -252,7 +252,7 @@ export function usePluginSettingsViewModel(
 					},
 					{
 						onSuccess: (): void => {
-							if (versionState.isDowngrade === true) {
+							if (versionState.isDowngrade) {
 								setIsFrozen(true);
 							}
 						},
@@ -260,7 +260,7 @@ export function usePluginSettingsViewModel(
 				);
 			});
 
-			if (res.ok === false) {
+			if (!res.ok) {
 				console.error("[usePluginSettingsViewModel] Failed to execute install version:", res.error);
 			}
 		});

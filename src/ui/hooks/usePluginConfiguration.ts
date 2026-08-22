@@ -126,7 +126,7 @@ export function usePluginConfiguration({
 						return;
 					}
 
-					targetPlugin.status = currentFrozen === true ? "frozen" : "active";
+					targetPlugin.status = currentFrozen ? "frozen" : "active";
 					targetPlugin.tokenSecretId = currentToken !== "" ? currentToken : undefined;
 					targetPlugin.autoEnable = currentConfig.autoEnable;
 					targetPlugin.showChangelog = currentConfig.showChangelog !== undefined ? { ...currentConfig.showChangelog } : undefined;
@@ -139,7 +139,7 @@ export function usePluginConfiguration({
 			});
 		});
 
-		if (saveResult.ok === false) {
+		if (!saveResult.ok) {
 			const err = saveResult.error;
 			canaryToast.error("Save failed", {
 				description: err.message,
@@ -177,7 +177,7 @@ export function usePluginConfiguration({
 	}, [dbSave]);
 
 	const executeAction = useCallback((action: () => void): void => {
-		if (isLocked === true) {
+		if (isLocked) {
 			return;
 		}
 		runTransition(action);
@@ -231,13 +231,11 @@ export function usePluginConfiguration({
 						priority: current?.priority ?? defaultPriority,
 					};
 				}
-			} else if (subKey === "priority") {
-				if (value === "release_notes" || value === "changelog_file") {
-					draft.showChangelog = {
-						mode: current?.mode ?? defaultMode,
-						priority: value,
-					};
-				}
+			} else if (value === "release_notes" || value === "changelog_file") {
+				draft.showChangelog = {
+					mode: current?.mode ?? defaultMode,
+					priority: value,
+				};
 			}
 		});
 	}, [updateConfigState, settings.global.showChangelog]);
@@ -259,13 +257,13 @@ export function usePluginConfiguration({
 			let nextAutoDownload = current?.autoDownload ?? true;
 
 			if (subKey === "value") {
-				if (typeof value === "string" || value === false) {
+				if (typeof value === "string") {
 					nextValue = value;
+				} else if (!value) {
+					nextValue = false;
 				}
-			} else if (subKey === "autoDownload") {
-				if (typeof value === "boolean") {
-					nextAutoDownload = value;
-				}
+			} else if (typeof value === "boolean") {
+				nextAutoDownload = value;
 			}
 
 			draft.updateInterval = {

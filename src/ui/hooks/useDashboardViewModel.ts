@@ -81,12 +81,12 @@ export function useDashboardViewModel(): DashboardViewModel {
 	const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null);
 
 	const isConfirmActive = confirmRequest !== null;
-	const effectiveShowSearch = isConfirmActive === true ? false : filters.showSearch;
-	const effectiveActiveDropdownId = isConfirmActive === true ? null : activeDropdownId;
+	const effectiveShowSearch = isConfirmActive ? false : filters.showSearch;
+	const effectiveActiveDropdownId = isConfirmActive ? null : activeDropdownId;
 
 	const handleOpenDropdown = useCallback(
 		(id: string | null): void => {
-			if (isScrolling === true) {
+			if (isScrolling) {
 				setActiveDropdownId(null);
 				return;
 			}
@@ -97,7 +97,7 @@ export function useDashboardViewModel(): DashboardViewModel {
 
 	const handleSetIsScrolling = useCallback((scrolling: boolean): void => {
 		setIsScrolling(scrolling);
-		if (scrolling === true) {
+		if (scrolling) {
 			setActiveDropdownId(null);
 		}
 	}, []);
@@ -151,7 +151,7 @@ export function useDashboardViewModel(): DashboardViewModel {
 			setActiveDropdownId(null);
 			const nextShow = !filters.showSearch;
 			filters.setShowSearch(nextShow);
-			if (nextShow === false) {
+			if (!nextShow) {
 				filters.clearSearch();
 			}
 		});
@@ -216,7 +216,7 @@ export function useDashboardViewModel(): DashboardViewModel {
 		(repo: string): void => {
 			runTransition((): void => {
 				const cancelRes = workflowService.cancelOperation(repo);
-				if (cancelRes.ok === true) {
+				if (cancelRes.ok) {
 					canaryToast.info(`Cancelled installation for ${repo}`);
 				} else {
 					canaryToast.error(`Failed to cancel installation: ${cancelRes.error.message}`);

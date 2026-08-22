@@ -129,7 +129,7 @@ export function useModalListSearch<T>(
 				const res = safe.try((): void => {
 					virtuosoRef.current?.scrollToIndex({ index: SCROLL_RESET_INDEX, align: "start" });
 				});
-				if (res.ok === false) {
+				if (!res.ok) {
 					console.error("[useModalListSearch] Failed to scroll to index:", res.error);
 				}
 			}

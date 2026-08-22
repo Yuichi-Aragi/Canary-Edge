@@ -77,7 +77,7 @@ export function useMutationTracker(): UseMutationTrackerResult {
 			const targetVersion = version !== "" ? version : "latest";
 			const opId = `${repo}:${String(m.submittedAt)}`;
 
-			if (Boolean(dismissedOperationIds[opId]) === true) {
+			if (dismissedOperationIds[opId]) {
 				return false;
 			}
 
@@ -104,14 +104,6 @@ export function useMutationTracker(): UseMutationTrackerResult {
 			};
 			const { repo } = vars;
 			const opId = `${repo}:${String(m.submittedAt)}`;
-
-			let normalizedError: Error | null = null;
-			if (m.error instanceof Error) {
-				normalizedError = m.error;
-			} else if (m.error !== null && m.error !== undefined) {
-				normalizedError = new Error(String(m.error));
-			}
-
 			const normalizedStatus: "pending" | "error" = m.status === "error" ? "error" : "pending";
 
 			return {
@@ -119,7 +111,7 @@ export function useMutationTracker(): UseMutationTrackerResult {
 				repo,
 				version: vars.version !== "" ? vars.version : "latest",
 				status: normalizedStatus,
-				error: normalizedError,
+				error: m.error instanceof Error ? m.error : null,
 				submittedAt: m.submittedAt,
 				variables: vars,
 			};

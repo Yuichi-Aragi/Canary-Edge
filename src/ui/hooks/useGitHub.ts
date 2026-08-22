@@ -17,6 +17,23 @@ import type {
 	ValidationContext,
 } from "@/domain/types";
 
+export interface UseRemoteManifestOptions {
+	readonly repoUrl: string;
+	readonly version?: string | undefined;
+	readonly channel?: ReleaseChannel | undefined;
+	readonly tokenSecretId?: string | undefined;
+	readonly isEnabled?: boolean | undefined;
+}
+
+export interface UsePluginChangelogOptions {
+	readonly repoUrl: string;
+	readonly version?: string | undefined;
+	readonly channel?: ReleaseChannel | undefined;
+	readonly priority?: ChangelogPriority | undefined;
+	readonly tokenSecretId?: string | undefined;
+	readonly isEnabled?: boolean | undefined;
+}
+
 export function useReleaseVersions(
 	repoUrl: string,
 	tokenSecretId?: string,
@@ -37,10 +54,10 @@ export function useReleaseVersions(
 
 			const effectiveToken = safe.unwrapOr(settingsService.getEffectiveToken(tokenSecretId), "");
 			const versionsList = safe.unwrap(
-				await releaseService.fetchReleaseVersions(scrubbedRepo, effectiveToken),
+				await releaseService.fetchReleaseVersions(scrubbedRepo, { token: effectiveToken }),
 			);
 
-			if (versionsList === undefined || versionsList === null || versionsList.length === 0) {
+			if (versionsList === null || versionsList.length === 0) {
 				throw new Error("No releases found");
 			}
 
@@ -55,12 +72,14 @@ export function useReleaseVersions(
 }
 
 export function useRemoteManifest(
-	repoUrl: string,
-	version = "latest",
-	channel: ReleaseChannel = "stable",
-	tokenSecretId?: string,
-	isEnabled = true,
+	options: Readonly<UseRemoteManifestOptions>,
 ): UseQueryResult<ValidationContext | null> {
+	const repoUrl = options.repoUrl;
+	const version = options.version !== undefined && options.version !== "" ? options.version : "latest";
+	const channel = options.channel ?? "stable";
+	const tokenSecretId = options.tokenSecretId;
+	const isEnabled = options.isEnabled ?? true;
+
 	const repositoryService = useService("repositoryService");
 	const settingsService = useService("settingsService");
 	const scrubbedRepo = repoUrl !== "" ? scrubRepositoryUrl(repoUrl) : "";
@@ -89,7 +108,7 @@ export function useRemoteManifest(
 				channel,
 			);
 
-			if (contextRes.ok === false) {
+			if (!contextRes.ok) {
 				throw contextRes.error;
 			}
 
@@ -104,13 +123,15 @@ export function useRemoteManifest(
 }
 
 export function usePluginChangelog(
-	repoUrl: string,
-	version = "latest",
-	channel: ReleaseChannel = "stable",
-	priority: ChangelogPriority = "release_notes",
-	tokenSecretId?: string,
-	isEnabled = true,
+	options: Readonly<UsePluginChangelogOptions>,
 ): UseQueryResult<string> {
+	const repoUrl = options.repoUrl;
+	const version = options.version !== undefined && options.version !== "" ? options.version : "latest";
+	const channel = options.channel ?? "stable";
+	const priority = options.priority ?? "release_notes";
+	const tokenSecretId = options.tokenSecretId;
+	const isEnabled = options.isEnabled ?? true;
+
 	const changelogService = useService("pluginChangelogService");
 	const settingsService = useService("settingsService");
 	const scrubbedRepo = repoUrl !== "" ? scrubRepositoryUrl(repoUrl) : "";

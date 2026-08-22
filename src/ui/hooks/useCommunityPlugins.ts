@@ -15,17 +15,17 @@ export async function syncCommunityPlugins(
 	indexedDbService: Readonly<IndexedDBService>,
 	force = false,
 ): Promise<boolean> {
-	if (inFlightSyncPromise !== null && force === false) {
-		return await inFlightSyncPromise;
+	if (inFlightSyncPromise !== null && !force) {
+		return inFlightSyncPromise;
 	}
 
 	const syncTask = async (): Promise<boolean> => {
 		const hasCacheRes = await indexedDbService.hasCommunityPlugins();
 		const hasCache = safe.unwrapOr(hasCacheRes, false);
 
-		if (hasCache === true && force === false) {
+		if (hasCache && !force) {
 			const isOnline = await isConnectedToInternet();
-			if (isOnline === false) {
+			if (!isOnline) {
 				return true;
 			}
 		} else {
@@ -33,19 +33,19 @@ export async function syncCommunityPlugins(
 		}
 
 		const listRes = await contentService.grabCommmunityPluginList();
-		if (listRes.ok === true && listRes.value !== null && listRes.value.length > 0) {
+		if (listRes.ok && listRes.value !== null && listRes.value.length > 0) {
 			const saveRes = await indexedDbService.saveCommunityPlugins(listRes.value);
-			if (saveRes.ok === false) {
+			if (!saveRes.ok) {
 				throw saveRes.error;
 			}
 			return true;
 		}
 
-		if (hasCache === true && force === false) {
+		if (hasCache && !force) {
 			return true;
 		}
 
-		if (listRes.ok === false) {
+		if (!listRes.ok) {
 			throw listRes.error;
 		}
 
@@ -80,14 +80,14 @@ export function useCommunityPluginsSync(): UseCommunityPluginsSyncResult {
 			const hasCacheRes = await indexedDbService.hasCommunityPlugins();
 			const hasCache = safe.unwrapOr(hasCacheRes, false);
 
-			if (hasCache === true) {
+			if (hasCache) {
 				void syncCommunityPlugins(contentService, indexedDbService, false).catch((err: unknown): void => {
 					console.warn("[Canary-Edge] Background community plugins sync encountered an issue:", err);
 				});
 				return true;
 			}
 
-			return await syncCommunityPlugins(contentService, indexedDbService, false);
+			return syncCommunityPlugins(contentService, indexedDbService, false);
 		},
 		staleTime: 1000 * 60 * 60,
 		gcTime: 1000 * 60 * 120,
@@ -101,7 +101,7 @@ export function useCommunityPluginsSync(): UseCommunityPluginsSyncResult {
 
 	return {
 		isReady: query.data === true,
-		isLoading: query.isLoading === true || (query.isFetching === true && query.data !== true),
+		isLoading: query.isLoading || (query.isFetching && query.data !== true),
 		isError: query.isError,
 		error: query.error,
 		retry,

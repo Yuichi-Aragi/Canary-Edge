@@ -8,7 +8,7 @@ export interface UseBooleanActions {
 }
 
 export function useBoolean(defaultValue = false): readonly [boolean, UseBooleanActions] {
-	const [state, setState] = useState<boolean>(Boolean(defaultValue));
+	const [state, setState] = useState<boolean>(defaultValue);
 
 	const setTrue = useCallback((): void => {
 		setState(true);
@@ -25,7 +25,7 @@ export function useBoolean(defaultValue = false): readonly [boolean, UseBooleanA
 	}, []);
 
 	const set = useCallback((value: boolean): void => {
-		setState(Boolean(value));
+		setState(value);
 	}, []);
 
 	const actions = useMemo((): UseBooleanActions => {

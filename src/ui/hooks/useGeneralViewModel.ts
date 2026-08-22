@@ -84,7 +84,7 @@ export function useGeneralViewModel(): GeneralViewModel {
 
 	const currentSecretId = useMemo((): string => {
 		const rawToken = settings.global.tokenSecretId;
-		if (rawToken === false || rawToken === undefined || rawToken === null) {
+		if (rawToken === false) {
 			return "";
 		}
 		return rawToken;
@@ -107,10 +107,9 @@ export function useGeneralViewModel(): GeneralViewModel {
 
 		if (
 			currentSecretId === "" ||
-			isValidatingToken === true ||
-			isTokenChecked === false ||
+			isValidatingToken ||
+			!isTokenChecked ||
 			tokenInfo === null ||
-			tokenInfo === undefined ||
 			notifiedSessionRef.current === currentSession
 		) {
 			return;
@@ -118,7 +117,7 @@ export function useGeneralViewModel(): GeneralViewModel {
 
 		notifiedSessionRef.current = currentSession;
 
-		if (tokenInfo.validToken === true) {
+		if (tokenInfo.validToken) {
 			const scopes = tokenInfo.currentScopes.join(", ");
 			canaryToast.success("GitHub Token Validated", {
 				description: scopes !== "" ? `Scopes: ${scopes}` : "Scopes: none",
@@ -175,7 +174,7 @@ export function useGeneralViewModel(): GeneralViewModel {
 					});
 
 					runTransition((): void => {
-						if (result.ok === true) {
+						if (result.ok) {
 							canaryToast.success("Setting updated", {
 								description: `${settingName} updated successfully.`,
 								id: `global-setting-${settingKey}`,

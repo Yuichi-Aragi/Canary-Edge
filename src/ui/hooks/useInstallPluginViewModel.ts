@@ -232,11 +232,11 @@ export function useInstallPluginViewModel(
 		if (scrubbedRepo === "" || pluginId === undefined) {
 			return false;
 		}
-		return Object.hasOwn(settings.plugins, scrubbedRepo) === true;
+		return Object.hasOwn(settings.plugins, scrubbedRepo);
 	}, [scrubbedRepo, pluginId, settings.plugins]);
 
 	useEffect((): void => {
-		if (validation.isVersionsSuccess === true && isAlreadyTracked === true && scrubbedRepo !== "") {
+		if (validation.isVersionsSuccess && isAlreadyTracked && scrubbedRepo !== "") {
 			canaryToast.warning(
 				"Plugin is already tracked. Please use the settings panel for upgrading, downgrading, and reinstalling.",
 				{ id: `already-tracked-${scrubbedRepo}` },
@@ -247,17 +247,17 @@ export function useInstallPluginViewModel(
 	const existingOperation = validation.shouldValidateRepo ? operations[scrubbedRepo] : undefined;
 	const isConflict = existingOperation?.status === "pending";
 
-	const remoteManifestQuery = useRemoteManifest(
-		validation.validatedRepo !== "" ? validation.validatedRepo : scrubbedRepo,
-		watchedVersion !== "" ? watchedVersion : "latest",
-		watchedReleaseChannel,
-		watchedUseToken ? (watchedTokenId ?? "") : undefined,
-		validation.shouldValidateRepo && validation.isVersionsSuccess,
-	);
+	const remoteManifestQuery = useRemoteManifest({
+		repoUrl: validation.validatedRepo !== "" ? validation.validatedRepo : scrubbedRepo,
+		version: watchedVersion !== "" ? watchedVersion : "latest",
+		channel: watchedReleaseChannel,
+		tokenSecretId: watchedUseToken ? (watchedTokenId ?? "") : undefined,
+		isEnabled: validation.shouldValidateRepo && validation.isVersionsSuccess,
+	});
 
 	const previewPlugin = useMemo((): PreviewPluginData | null => {
 		if (
-			validation.shouldValidateRepo === false ||
+			!validation.shouldValidateRepo ||
 			remoteManifestQuery.data === null ||
 			remoteManifestQuery.data === undefined
 		) {
@@ -278,7 +278,7 @@ export function useInstallPluginViewModel(
 		const platformCompatRes = compatibilityService.checkPlatformCompatibility(manifest, ctx);
 		const platformCompat = safe.unwrapOr(platformCompatRes, { isCompatible: true, requiresOverride: false });
 
-		const isIncompatible = appCompat.isCompatible === false || platformCompat.isCompatible === false;
+		const isIncompatible = !appCompat.isCompatible || !platformCompat.isCompatible;
 
 		return {
 			name: manifest.name,
@@ -298,25 +298,25 @@ export function useInstallPluginViewModel(
 	const isValidated = validation.shouldValidateRepo && validation.isVersionsSuccess;
 
 	const isPreviewLoading =
-		validation.shouldValidateRepo === true &&
-		(validation.isLoadingVersions === true ||
-			validation.isValidatingToken === true ||
-			validation.isValidationPending === true ||
-			remoteManifestQuery.isLoading === true);
+		validation.shouldValidateRepo &&
+		(validation.isLoadingVersions ||
+			validation.isValidatingToken ||
+			validation.isValidationPending ||
+			remoteManifestQuery.isLoading);
 
 	const isPreviewError =
-		validation.shouldValidateRepo === true &&
-		isPreviewLoading === false &&
-		(validation.isVersionsError === true ||
-			remoteManifestQuery.isError === true ||
+		validation.shouldValidateRepo &&
+		!isPreviewLoading &&
+		(validation.isVersionsError ||
+			remoteManifestQuery.isError ||
 			validation.validationStatus === "error" ||
-			(validation.isVersionsSuccess === true && remoteManifestQuery.data === null && remoteManifestQuery.isLoading === false));
+			(validation.isVersionsSuccess && remoteManifestQuery.data === null && !remoteManifestQuery.isLoading));
 
 	const previewErrorMessage = useMemo((): string | undefined => {
-		if (isPreviewError === false) {
+		if (!isPreviewError) {
 			return undefined;
 		}
-		if (remoteManifestQuery.error instanceof Error) {
+		if (remoteManifestQuery.error !== null) {
 			return remoteManifestQuery.error.message;
 		}
 		if (validation.validationMessage.trim() !== "") {
@@ -325,11 +325,7 @@ export function useInstallPluginViewModel(
 		return "Failed to fetch repository or plugin manifest.";
 	}, [isPreviewError, remoteManifestQuery.error, validation.validationMessage]);
 
-	const shouldShowPreviewCard =
-		validation.shouldValidateRepo === true ||
-		previewPlugin !== null ||
-		isPreviewLoading === true ||
-		isPreviewError === true;
+	const shouldShowPreviewCard = validation.shouldValidateRepo;
 
 	const previewVersion = useMemo((): string => {
 		if (previewPlugin !== null) {
@@ -341,12 +337,12 @@ export function useInstallPluginViewModel(
 
 	useEffect((): void => {
 		const shouldSetLatest =
-			validation.isVersionsSuccess === true &&
+			validation.isVersionsSuccess &&
 			validation.versions !== undefined &&
 			validation.versions.length > 0 &&
 			watchedVersion === "";
 
-		if (shouldSetLatest === true) {
+		if (shouldSetLatest) {
 			setValue("version", "latest", { shouldValidate: true });
 		}
 	}, [validation.isVersionsSuccess, validation.versions, watchedVersion, setValue]);
@@ -355,7 +351,7 @@ export function useInstallPluginViewModel(
 		(value: string): void => {
 			runTransition((): void => {
 				setValue("repositoryUrl", value, { shouldValidate: false });
-				if (validation.shouldValidateRepo === true) {
+				if (validation.shouldValidateRepo) {
 					validation.resetRepoValidation();
 				}
 			});
@@ -377,9 +373,7 @@ export function useInstallPluginViewModel(
 	const handleRetryPreview = useCallback((): void => {
 		runTransition(async (): Promise<void> => {
 			await validation.handleRepoValidation(watchedRepo);
-			if (remoteManifestQuery.refetch !== undefined) {
-				await remoteManifestQuery.refetch();
-			}
+			await remoteManifestQuery.refetch();
 		});
 	}, [runTransition, validation, watchedRepo, remoteManifestQuery]);
 
@@ -388,7 +382,7 @@ export function useInstallPluginViewModel(
 			runTransition((): void => {
 				const finalScrubbedRepo = scrubRepositoryUrl(data.repositoryUrl);
 
-				if (isAlreadyTracked === true) {
+				if (isAlreadyTracked) {
 					console.warn(`[InstallPlugin] Plugin already tracked: ${finalScrubbedRepo}`);
 					canaryToast.warning(
 						"Plugin is already tracked. Please use the settings panel for upgrading, downgrading, and reinstalling.",
@@ -397,7 +391,7 @@ export function useInstallPluginViewModel(
 					return;
 				}
 
-				if (isConflict === true) {
+				if (isConflict) {
 					console.warn(`[InstallPlugin] Operation already pending for: ${finalScrubbedRepo}`);
 					canaryToast.warning("Operation already in progress for this repository.", {
 						id: `conflict-${finalScrubbedRepo}`,

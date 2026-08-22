@@ -95,15 +95,8 @@ export function useRateLimitDashboardViewModel(tokenSecretId?: string): RateLimi
 	const isAnonymous = tokenString === "";
 	const isBusy = isFetching || isPending;
 
-	let normalizedError: Error | null = null;
-	if (error instanceof Error) {
-		normalizedError = error;
-	} else if (error !== null) {
-		normalizedError = new Error(String(error));
-	}
-
 	const handleManualRefresh = useCallback((): void => {
-		if (isRefreshingRef.current === true || isFetching === true || isPending === true) {
+		if (isRefreshingRef.current || isFetching || isPending) {
 			return;
 		}
 		isRefreshingRef.current = true;
@@ -112,7 +105,7 @@ export function useRateLimitDashboardViewModel(tokenSecretId?: string): RateLimi
 				return refetch();
 			});
 			isRefreshingRef.current = false;
-			if (res.ok === false) {
+			if (!res.ok) {
 				console.error("[useRateLimitDashboardViewModel] Failed to refresh rate limit:", res.error);
 			}
 		});
@@ -126,7 +119,7 @@ export function useRateLimitDashboardViewModel(tokenSecretId?: string): RateLimi
 			isLoading,
 			isError,
 			isBusy,
-			error: normalizedError,
+			error,
 		},
 		actions: {
 			handleManualRefresh,

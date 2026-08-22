@@ -17,15 +17,15 @@ export function useDropdownOpenState(options: UseDropdownOpenStateOptions): UseD
 	const isScrolling = options.isScrolling ?? false;
 	const activeDropdownId = options.activeDropdownId ?? null;
 
-	const isOpen = activeDropdownId === menuId && isScrolling === false;
+	const isOpen = activeDropdownId === menuId && !isScrolling;
 
 	const handleOpenChange = useCallback(
 		(nextOpen: boolean): void => {
-			if (isScrolling === true) {
+			if (isScrolling) {
 				onOpenDropdown?.(null);
 				return;
 			}
-			if (nextOpen === true) {
+			if (nextOpen) {
 				onOpenDropdown?.(menuId);
 			} else if (activeDropdownId === menuId) {
 				onOpenDropdown?.(null);

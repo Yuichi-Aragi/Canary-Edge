@@ -39,9 +39,7 @@ export function useFuzzySearch<T extends Record<string, unknown>>(
 		}
 
 		const result = safe.try((): SearchIndexContainer<T> => {
-			const fieldsList = keys.map((k: string): string => {
-				return String(k);
-			});
+			const fieldsList: string[] = [...keys];
 
 			const documents: MiniSearchDocument<T>[] = items.map(
 				(item: T, index: number): MiniSearchDocument<T> => {
@@ -77,7 +75,7 @@ export function useFuzzySearch<T extends Record<string, unknown>>(
 	return useMemo((): readonly FuzzySearchMatchedItem<T>[] => {
 		const cleanQuery = query.trim();
 		if (cleanQuery === "" || items.length === 0 || indexContainer === null) {
-			return items as readonly FuzzySearchMatchedItem<T>[];
+			return items;
 		}
 
 		const enableFuzzy = options?.enableFuzzy ?? true;
@@ -94,7 +92,7 @@ export function useFuzzySearch<T extends Record<string, unknown>>(
 			const searchParams: SearchOptions = {
 				prefix,
 				combineWith,
-				fuzzy: enableFuzzy === true ? fuzzyThreshold : false,
+				fuzzy: enableFuzzy ? fuzzyThreshold : false,
 				...(boost !== undefined ? { boost } : {}),
 			};
 
@@ -110,7 +108,7 @@ export function useFuzzySearch<T extends Record<string, unknown>>(
 				return {
 					...originalItem,
 					_score: res.score,
-					_fuzzyResult: res.terms as readonly unknown[],
+					_fuzzyResult: res.terms,
 				};
 			});
 		});

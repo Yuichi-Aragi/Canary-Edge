@@ -71,14 +71,14 @@ export function useVirtualListNavigation(options: UseVirtualListNavigationOption
 					behavior: scrollBehavior,
 				});
 			});
-			if (res.ok === false) {
+			if (!res.ok) {
 				console.error("[useVirtualListNavigation] Failed to scroll into view:", res.error);
 			}
 		}
 	}, [safeActiveIndex, itemCount, virtuosoRef, scrollBehavior]);
 
 	const handleItemMouseEnter = useCallback((index: number): void => {
-		if (isKeyboardNavigatingRef.current === true) {
+		if (isKeyboardNavigatingRef.current) {
 			return;
 		}
 		setActiveIndex(index);

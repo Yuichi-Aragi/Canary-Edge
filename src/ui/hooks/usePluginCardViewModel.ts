@@ -120,8 +120,8 @@ export function usePluginCardViewModel({
 	}, [settingsService, repo]);
 
 	const resolvedId = usePluginId(repo);
-	const fallbackRepoName = repo.includes("/") === true ? (repo.split("/")[1] ?? repo) : repo;
-	const pluginId = isTracked === true ? (resolvedId ?? fallbackRepoName) : repo;
+	const fallbackRepoName = repo.includes("/") ? (repo.split("/")[1] ?? repo) : repo;
+	const pluginId = isTracked ? (resolvedId ?? fallbackRepoName) : repo;
 
 	const internalApp = mainPlugin.app as InternalApp;
 	const { manifests } = internalApp.plugins;
@@ -146,12 +146,12 @@ export function usePluginCardViewModel({
 		if (overrideData?.version !== undefined && overrideData.version !== "") {
 			return overrideData.version;
 		}
-		if (manifest?.version !== undefined && manifest.version !== "") {
+		if (manifest !== undefined && manifest.version !== "") {
 			return manifest.version;
 		}
-		if (isInstalling === true) {
-			const activeVersion = activeInstallation?.version;
-			if (activeVersion !== undefined && activeVersion !== "") {
+		if (isInstalling) {
+			const activeVersion = activeInstallation.version;
+			if (activeVersion !== "") {
 				return activeVersion;
 			}
 			return "latest";
@@ -165,15 +165,15 @@ export function usePluginCardViewModel({
 		if (overrideData?.description !== undefined && overrideData.description !== "") {
 			return overrideData.description;
 		}
-		if (manifest?.description !== undefined && manifest.description !== "") {
+		if (manifest !== undefined && manifest.description !== "") {
 			return manifest.description;
 		}
-		if (isInstalling === true) {
+		if (isInstalling) {
 			const operationMessage = operation?.message;
 			if (operationMessage !== undefined && operationMessage !== "") {
 				return operationMessage;
 			}
-			const installOpErrorMessage = activeInstallation?.error?.message;
+			const installOpErrorMessage = activeInstallation.error?.message;
 			if (installOpErrorMessage !== undefined && installOpErrorMessage !== "") {
 				return `Error: ${installOpErrorMessage}`;
 			}
@@ -184,9 +184,9 @@ export function usePluginCardViewModel({
 
 	const manifestDescription = resolveManifestDescription();
 
-	const manifestAuthor: string | undefined = overrideData?.author ?? manifest?.author ?? undefined;
+	const manifestAuthor: string | undefined = overrideData?.author ?? manifest?.author;
 	const isIncompatible = overrideData?.isIncompatible ?? (frozenData?.compatibility === "incompatible");
-	const isFrozen = frozenData?.status === "frozen" || (isInstalling === true && (activeInstallation?.variables.isFrozen ?? false));
+	const isFrozen = frozenData?.status === "frozen" || (isInstalling && activeInstallation.variables.isFrozen);
 
 	const isLocalMutationPending =
 		updatePlugin.isPending ||
@@ -195,11 +195,11 @@ export function usePluginCardViewModel({
 		registerUntrackedPlugin.isPending;
 
 	const hasActiveOperation =
-		isInstalling === true
-			? activeInstallation?.status === "pending" || operation?.status === "pending"
-			: isTracked === true && operation?.status === "pending";
+		isInstalling
+			? activeInstallation.status === "pending" || operation?.status === "pending"
+			: isTracked && operation?.status === "pending";
 
-	const isBusy = hasActiveOperation === true || isLocalMutationPending === true || isTransitionPending === true;
+	const isBusy = hasActiveOperation || isLocalMutationPending || isTransitionPending;
 
 	const isLoading = overrideData?.isLoading ?? false;
 	const isError = overrideData?.isError ?? false;
@@ -217,8 +217,8 @@ export function usePluginCardViewModel({
 					},
 					{
 						onSuccess: (result: Readonly<UpdateOperationResult>): void => {
-							if (onlyCheck === true) {
-								if (result.status === "update_available" || result.wasUpdated === true) {
+							if (onlyCheck) {
+								if (result.status === "update_available" || result.wasUpdated) {
 									canaryToast.info(`Update available for ${pluginDisplayName}`);
 								} else {
 									canaryToast.success(`${pluginDisplayName} is up to date`);
@@ -248,7 +248,7 @@ export function usePluginCardViewModel({
 				type: "unregister",
 				repo,
 			});
-			if (confirmRes.ok === true && confirmRes.value === true) {
+			if (confirmRes.ok && confirmRes.value) {
 				deletePlugin.mutate(repo, {
 					onSuccess: (): void => {
 						canaryToast.success(`Unregistered ${pluginDisplayName}`);
@@ -267,7 +267,7 @@ export function usePluginCardViewModel({
 				type: "resetSettings",
 				repo,
 			});
-			if (confirmRes.ok === true && confirmRes.value === true) {
+			if (confirmRes.ok && confirmRes.value) {
 				resetPluginSettings.mutate(repo, {
 					onSuccess: (): void => {
 						canaryToast.success(`Reset settings for ${pluginDisplayName}`);
@@ -285,7 +285,7 @@ export function usePluginCardViewModel({
 			const repoRes = await pluginQueryService.getRepoByPluginId(pluginId);
 			const resolvedRepo = safe.unwrapOr(repoRes, undefined);
 
-			if (resolvedRepo === undefined || resolvedRepo.trim() === "" || resolvedRepo.includes("/") === false) {
+			if (resolvedRepo === undefined || resolvedRepo.trim() === "" || !resolvedRepo.includes("/")) {
 				canaryToast.info(
 					`Cannot resolve GitHub repository for "${pluginDisplayName}". For private or community-unlisted plugins, please register using the Install panel directly.`,
 					{ duration: 6000, id: `untracked-reg-${pluginId}` },
@@ -346,7 +346,7 @@ export function usePluginCardViewModel({
 					mode: "after",
 				});
 
-				if (displayRes.ok === false) {
+				if (!displayRes.ok) {
 					console.error("Failed to display changelog for detected update:", displayRes.error);
 				}
 			});
@@ -363,12 +363,12 @@ export function usePluginCardViewModel({
 
 	const handleCancelOperation = useCallback((): void => {
 		runTransition((): void => {
-			if (isInstalling === true && onCancelInstall !== undefined) {
+			if (isInstalling && onCancelInstall !== undefined) {
 				onCancelInstall(repo);
 				return;
 			}
 			const cancelRes = workflowService.cancelOperation(repo);
-			if (cancelRes.ok === true) {
+			if (cancelRes.ok) {
 				canaryToast.info(`Cancelled operation for ${pluginDisplayName}`);
 			} else {
 				canaryToast.error(`Failed to cancel operation: ${cancelRes.error.message}`);
@@ -408,7 +408,7 @@ export function usePluginCardViewModel({
 			isBusy,
 			hasActiveOperation,
 			isFrozen,
-			isUntracked: isTracked === false && isInstalling === false,
+			isUntracked: !isTracked && !isInstalling,
 			isInstalling,
 			installStatus,
 			installErrorMessage,

@@ -142,7 +142,7 @@ function formatPublicationTime(publishedAt: string): string | null {
 
 	const dateRes = safe.try((): string | null => {
 		const parsedDate = parseISO(publishedAt);
-		if (isValid(parsedDate) === false) {
+		if (!isValid(parsedDate)) {
 			return null;
 		}
 		return formatDistanceToNow(parsedDate, { addSuffix: true });
@@ -157,7 +157,7 @@ const getVersionBadgeInfo = (item: Readonly<ReleaseVersion>): VersionBadgeInfo =
 		return specialBadge;
 	}
 
-	if (item.prerelease === false) {
+	if (!item.prerelease) {
 		return STABLE_BADGE_INFO;
 	}
 
@@ -236,7 +236,7 @@ const GET_ITEM_ID = (item: Readonly<IndexedReleaseVersion>): string => {
 const getFuzzyOption = (
 	enableFuzzy: boolean,
 ): ((term: string) => number | false) | false => {
-	if (enableFuzzy === false) {
+	if (!enableFuzzy) {
 		return false;
 	}
 	return (term: string): number | false => {
@@ -373,16 +373,15 @@ export function useVersionSelectorViewModel(
 			);
 			const effectiveToken = safe.unwrapOr(effectiveTokenRes, "");
 
-			const fetchRes = await releaseService.fetchReleaseVersions(
-				scrubbedRepo,
-				effectiveToken,
+			const fetchRes = await releaseService.fetchReleaseVersions(scrubbedRepo, {
+				token: effectiveToken,
 				channel,
-				undefined,
-				100,
-				pageParam,
-			);
+				ctx: undefined,
+				perPage: 100,
+				page: pageParam,
+			});
 
-			if (fetchRes.ok === false) {
+			if (!fetchRes.ok) {
 				throw normalizeError(fetchRes.error);
 			}
 
@@ -417,7 +416,7 @@ export function useVersionSelectorViewModel(
 
 		const addVersion = (item: Readonly<ReleaseVersion>): void => {
 			const normTag = item.version.trim().toLowerCase();
-			if (normTag !== "" && dedupeMap.has(normTag) === false) {
+			if (normTag !== "" && !dedupeMap.has(normTag)) {
 				dedupeMap.set(normTag, item);
 			}
 		};
@@ -446,14 +445,14 @@ export function useVersionSelectorViewModel(
 		if (onLoadMoreProp !== undefined) {
 			return (rawVersions?.length ?? 0) >= 100;
 		}
-		return hasNextPage === true;
+		return hasNextPage;
 	}, [onLoadMoreProp, rawVersions, hasNextPage]);
 
 	const handleLoadMore = useCallback((): void => {
 		if (
-			isFetchingPageRef.current === true ||
-			isManualLoadingMore === true ||
-			isFetchingNextPage === true
+			isFetchingPageRef.current ||
+			isManualLoadingMore ||
+			isFetchingNextPage
 		) {
 			return;
 		}
@@ -475,23 +474,23 @@ export function useVersionSelectorViewModel(
 
 				if (onLoadMoreProp !== undefined) {
 					await onLoadMoreProp();
-					if (mountedRef.current === true) {
+					if (mountedRef.current) {
 						canaryToast.success("Loaded additional versions.", { id: toastId });
 					}
 					return;
 				}
 
-				if (hasNextPage === true) {
+				if (hasNextPage) {
 					await fetchNextPage();
-					if (mountedRef.current === true) {
+					if (mountedRef.current) {
 						canaryToast.success("Loaded additional release versions.", { id: toastId });
 					}
-				} else if (mountedRef.current === true) {
+				} else if (mountedRef.current) {
 					canaryToast.info("No further release versions available.", { id: toastId });
 				}
 			});
 
-			if (res.ok === false && mountedRef.current === true) {
+			if (!res.ok && mountedRef.current) {
 				const msg = res.error.message;
 				setFetchErrorState(msg);
 				canaryToast.error(`Failed to load release versions: ${msg}`, { id: toastId });
@@ -533,7 +532,7 @@ export function useVersionSelectorViewModel(
 		[onChange, closeModal, handleLoadMore, handleRetry, runTransition],
 	);
 
-	const isErrorCombined = isInfiniteError === true || fetchErrorState !== null;
+	const isErrorCombined = isInfiniteError || fetchErrorState !== null;
 
 	const filteredIndexedVersions = useMemo((): readonly IndexedReleaseVersion[] => {
 		if (indexedVersions.length === 0) {
@@ -632,15 +631,15 @@ export function useVersionSelectorViewModel(
 	const effectiveListData = useMemo((): readonly IndexedReleaseVersion[] => {
 		const items: IndexedReleaseVersion[] = [];
 
-		if (showLatest === true) {
+		if (showLatest) {
 			items.push(INDEXED_LATEST_ITEM);
 		}
 
 		items.push(...filteredIndexedVersions);
 
-		if (isErrorCombined === true) {
+		if (isErrorCombined) {
 			items.push(INDEXED_ERROR_RETRY_ITEM);
-		} else if (hasMore === true) {
+		} else if (hasMore) {
 			items.push(INDEXED_LOAD_MORE_ITEM);
 		}
 
@@ -692,8 +691,8 @@ export function useVersionSelectorViewModel(
 		if (fetchErrorState !== null) {
 			return fetchErrorState;
 		}
-		if (infiniteError !== null && infiniteError !== undefined) {
-			return infiniteError instanceof Error ? infiniteError.message : String(infiniteError);
+		if (infiniteError !== null) {
+			return infiniteError.message;
 		}
 		return null;
 	}, [fetchErrorState, infiniteError]);

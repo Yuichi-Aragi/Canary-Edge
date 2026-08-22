@@ -15,7 +15,7 @@ export function useLongPress(options: LongPressOptions): {
 	const delay = options.delay ?? 500;
 
 	const timeoutRef = useRef<number | null>(null);
-	const isLongPressActive = useRef<boolean>(false);
+	const isLongPressActiveRef = useRef<boolean>(false);
 	const startPointRef = useRef<{ readonly x: number; readonly y: number } | null>(null);
 
 	useEffect((): (() => void) => {
@@ -32,7 +32,7 @@ export function useLongPress(options: LongPressOptions): {
 			return;
 		}
 
-		isLongPressActive.current = false;
+		isLongPressActiveRef.current = false;
 		startPointRef.current = { x: e.clientX, y: e.clientY };
 
 		if (timeoutRef.current !== null) {
@@ -40,7 +40,7 @@ export function useLongPress(options: LongPressOptions): {
 		}
 
 		timeoutRef.current = window.setTimeout((): void => {
-			isLongPressActive.current = true;
+			isLongPressActiveRef.current = true;
 			onLongPress(e);
 		}, delay);
 	}, [delay, onLongPress]);
@@ -51,7 +51,7 @@ export function useLongPress(options: LongPressOptions): {
 			timeoutRef.current = null;
 		}
 
-		if (shouldTriggerClick === true && isLongPressActive.current === false && onClick !== undefined) {
+		if (shouldTriggerClick && !isLongPressActiveRef.current && onClick !== undefined) {
 			const startPoint = startPointRef.current;
 			const distance = startPoint !== null 
 				? Math.hypot(e.clientX - startPoint.x, e.clientY - startPoint.y) 
@@ -62,7 +62,7 @@ export function useLongPress(options: LongPressOptions): {
 			}
 		}
 
-		isLongPressActive.current = false;
+		isLongPressActiveRef.current = false;
 		startPointRef.current = null;
 	}, [onClick]);
 

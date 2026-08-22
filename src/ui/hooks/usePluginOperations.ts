@@ -86,7 +86,7 @@ export function usePluginOperations(): UsePluginOperationsResult {
 			const res = await safe.tryAsync(async (): Promise<void> => {
 				const queryPromises: Promise<void>[] = [];
 
-				if (isStructural === true) {
+				if (isStructural) {
 					queryPromises.push(
 						queryClient.invalidateQueries({ queryKey: ["plugins", "installed"], exact: true }),
 						queryClient.invalidateQueries({ queryKey: ["trackedPluginMappings"] }),
@@ -104,7 +104,7 @@ export function usePluginOperations(): UsePluginOperationsResult {
 				await Promise.all(queryPromises);
 			});
 
-			if (res.ok === false) {
+			if (!res.ok) {
 				console.error(
 					`[usePluginOperations] Failed to invalidate queries for ${uniqueRepos.join(", ")}:`,
 					res.error,
@@ -236,7 +236,7 @@ export function usePluginOperations(): UsePluginOperationsResult {
 				repoPath = safe.unwrapOr(repoRes, undefined);
 			}
 
-			if (repoPath === undefined || repoPath.trim() === "" || repoPath.includes("/") === false) {
+			if (repoPath === undefined || repoPath.trim() === "" || !repoPath.includes("/")) {
 				throw new Error(
 					`Unable to resolve official repository for "${pluginId}". Please use the Install panel directly for private or unlisted plugins.`,
 				);
@@ -248,11 +248,13 @@ export function usePluginOperations(): UsePluginOperationsResult {
 			safe.unwrap(
 				await settingsService.addPluginToList(
 					repoPath,
-					false,
-					"",
-					false,
-					undefined,
-					true,
+					{
+						isFrozen: false,
+						privateApiKeySecretId: "",
+						isIncompatible: false,
+						overrides: undefined,
+						mergeWithExisting: true,
+					},
 					currentSettings.version,
 				),
 			);
