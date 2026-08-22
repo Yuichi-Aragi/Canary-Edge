@@ -6,7 +6,8 @@ import {
   unlinkSync, 
   mkdirSync,
   renameSync,
-  statSync
+  statSync,
+  appendFileSync
 } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
@@ -27,6 +28,26 @@ const CONFIG = {
     STYLES: 'styles.css'
   }
 };
+
+/**
+ * Appends output key-values to $GITHUB_OUTPUT if running inside GitHub Actions.
+ */
+function setGithubOutput(key, value) {
+  const outputFile = process.env.GITHUB_OUTPUT;
+  if (!outputFile) return;
+
+  const strValue = String(value);
+  if (strValue.includes('\n')) {
+    const delimiter = `DELIMITER_${Math.random().toString(36).substring(2, 10)}`;
+    appendFileSync(
+      outputFile,
+      `${key}<<${delimiter}\n${strValue}\n${delimiter}\n`,
+      'utf-8'
+    );
+  } else {
+    appendFileSync(outputFile, `${key}=${strValue}\n`, 'utf-8');
+  }
+}
 
 function run(command, options = {}) {
   const fullCommand = `set -euo pipefail; ${command}`;
@@ -192,6 +213,11 @@ async function main() {
   const versionFile = isBeta ? CONFIG.VERSION_FILES.BETA : CONFIG.VERSION_FILES.STABLE;
   console.log(`🎯 ${isBeta ? '🔬 Beta' : '📦 Stable'} release | Version file: ${versionFile}`);
   
+  // Set basic metadata outputs
+  setGithubOutput('is_beta', String(isBeta));
+  setGithubOutput('version', manifestVersion);
+  setGithubOutput('version_file', versionFile);
+
   const versions = existsSync(versionFile) ? readJsonFile(versionFile) : {};
   const packageJson = readJsonFile('package.json');
   
@@ -209,6 +235,8 @@ async function main() {
   const latest = getLatestVersionEntry(versions);
   if (!shouldTriggerRelease(latest, manifestVersion, minAppVersion)) {
     console.log(`ℹ️ No release needed. Latest: v${latest?.version}`);
+    setGithubOutput('released', 'false');
+    setGithubOutput('artifacts', '');
     process.exit(0);
   }
   
@@ -260,12 +288,17 @@ async function main() {
       versions[manifestVersion] = minAppVersion;
       writeJsonFile(versionFile, versions);
     }
+
+    // Set release success outputs for GitHub Actions
+    setGithubOutput('released', 'true');
+    setGithubOutput('artifacts', releaseAssets.join('\n'));
     
     const duration = ((Date.now() - start) / 1000).toFixed(2);
     console.log(`\n🎉 Success! Release completed in ${duration}s`);
     
   } catch (error) {
     console.error(`\n❌ Fatal Error: ${error.message}`);
+    setGithubOutput('released', 'false');
     
     console.log('\n🔄 Rolling back changes...');
     for (const [file, content] of backups) {
