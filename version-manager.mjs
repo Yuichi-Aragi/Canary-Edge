@@ -28,10 +28,6 @@ const CONFIG = {
   }
 };
 
-
-
-
-
 function run(command, options = {}) {
   const fullCommand = `set -euo pipefail; ${command}`;
   console.log(`> ${command}`);
@@ -156,10 +152,11 @@ function prepareReleaseAsset(sourcePath, destPath) {
     throw new Error(`Asset source not found: ${sourcePath}`);
   }
   
-  copyFileSync(sourcePath, destPath);
-  console.log(`📋 Prepared asset: ${destPath}`);
+  if (sourcePath !== destPath) {
+    copyFileSync(sourcePath, destPath);
+    console.log(`📋 Prepared asset: ${destPath}`);
+  }
 }
-
 
 async function main() {
   const start = Date.now();
@@ -262,10 +259,6 @@ async function main() {
     if (versions[manifestVersion] !== minAppVersion) {
       versions[manifestVersion] = minAppVersion;
       writeJsonFile(versionFile, versions);
-    }
-    
-    if (existsSync(mainJsPath)) {
-      unlinkSync(mainJsPath);
     }
     
     const duration = ((Date.now() - start) / 1000).toFixed(2);
