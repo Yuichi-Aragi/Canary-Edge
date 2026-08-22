@@ -46,7 +46,7 @@ function deserializeWindowState(value: string, fallback: WindowState): WindowSta
 	try {
 		const parsed: unknown = JSON.parse(value);
 		const result = v.safeParse(WindowStateSchema, parsed);
-		if (result.success === true) {
+		if (result.success) {
 			return result.output;
 		}
 		return fallback;

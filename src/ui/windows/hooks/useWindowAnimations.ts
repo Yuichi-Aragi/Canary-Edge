@@ -1,7 +1,9 @@
-import { useRef, useCallback, type RefObject } from "react";
-import gsap from "gsap";
+import { useCallback, useRef } from "react";
 import { useGSAP } from "@gsap/react";
+import gsap from "gsap";
 import invariant from "tiny-invariant";
+
+import type { RefObject } from "react";
 
 export interface UseWindowAnimationsArgs {
 	readonly containerRef: RefObject<HTMLDivElement | null>;
@@ -10,31 +12,29 @@ export interface UseWindowAnimationsArgs {
 
 export function useWindowAnimations({
 	containerRef,
-	animatorRef
+	animatorRef,
 }: UseWindowAnimationsArgs): (onComplete: () => void) => void {
 	const animateExitRef = useRef<((onComplete: () => void) => void) | null>(null);
-	const hasAnimatedIn = useRef(false);
+	const hasAnimatedInRef = useRef<boolean>(false);
 
 	useGSAP((_context, contextSafe) => {
-		if (hasAnimatedIn.current === true) {
-			return;
-		}
-		
 		const target = animatorRef.current;
 		invariant(target !== null, "Animation target ref missing");
 
-		gsap.from(target, {
-			opacity: 0,
-			scale: 0.97,
-			y: 15,
-			duration: 0.3,
-			ease: "power2.out",
-			force3D: true,
-			clearProps: "opacity,scale,y,willChange",
-			onComplete: (): void => {
-				hasAnimatedIn.current = true;
-			}
-		});
+		if (!hasAnimatedInRef.current) {
+			gsap.from(target, {
+				opacity: 0,
+				scale: 0.97,
+				y: 15,
+				duration: 0.3,
+				ease: "power2.out",
+				force3D: true,
+				clearProps: "opacity,scale,y,willChange",
+				onComplete: (): void => {
+					hasAnimatedInRef.current = true;
+				},
+			});
+		}
 
 		if (contextSafe !== undefined) {
 			animateExitRef.current = contextSafe((onComplete: () => void): void => {
@@ -45,7 +45,7 @@ export function useWindowAnimations({
 					duration: 0.2,
 					ease: "power2.in",
 					force3D: true,
-					onComplete
+					onComplete,
 				});
 			});
 		}

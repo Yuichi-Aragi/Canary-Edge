@@ -69,7 +69,7 @@ export function useCEWindowViewModel(options: UseCEWindowViewModelOptions): CEWi
 	}, [animateExit, onClose]);
 
 	const handleRefresh = useCallback((): void => {
-		if (isRefreshing === true || isExecutingResetRef.current === true) {
+		if (isRefreshing || isExecutingResetRef.current) {
 			return;
 		}
 
@@ -87,8 +87,8 @@ export function useCEWindowViewModel(options: UseCEWindowViewModelOptions): CEWi
 		});
 
 		void confirmPromise.then((confirmed: boolean): void => {
-			if (confirmed === true) {
-				if (isExecutingResetRef.current === true) {
+			if (confirmed) {
+				if (isExecutingResetRef.current) {
 					return;
 				}
 				isExecutingResetRef.current = true;
