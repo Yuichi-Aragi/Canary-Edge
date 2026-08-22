@@ -27,7 +27,6 @@ export function CanaryToastCard(props: Readonly<CanaryToastProps>): JSX.Element 
 		title,
 		description,
 		variant: rawVariant,
-		dismissible: _dismissible,
 		action,
 		cancel,
 		className,
