@@ -8,7 +8,7 @@
     "obsidian-md",
     "obsidian-plugin"
   ],
-    "main": "main.js",
+  "main": "main.js",
   "scripts": {
     "build": "node esbuild.config.mjs",
     "typecheck": "tsc --noEmit",
