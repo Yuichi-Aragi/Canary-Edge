@@ -1,18 +1,18 @@
-import esbuild from "esbuild";
-import process from "node:process";
+import { exec } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { exec } from "node:child_process";
+import process from "node:process";
 import { fileURLToPath } from "node:url";
-import { sassPlugin } from "esbuild-sass-plugin";
 
 import * as babel from "@babel/core";
-import BabelPluginReactCompiler from "babel-plugin-react-compiler";
+import babelPluginProposalDecorators from "@babel/plugin-proposal-decorators";
 import babelPluginSyntaxJsx from "@babel/plugin-syntax-jsx";
+import babelPluginTransformClassProperties from "@babel/plugin-transform-class-properties";
 import babelPluginTransformTypescript from "@babel/plugin-transform-typescript";
 import babelPluginTransformTypescriptMetadata from "babel-plugin-transform-typescript-metadata";
-import babelPluginProposalDecorators from "@babel/plugin-proposal-decorators";
-import babelPluginTransformClassProperties from "@babel/plugin-transform-class-properties";
+import BabelPluginReactCompiler from "babel-plugin-react-compiler";
+import esbuild from "esbuild";
+import { sassPlugin } from "esbuild-sass-plugin";
 
 const isDevelopment = process.argv.includes("--development");
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -34,7 +34,28 @@ const reactCompilerEsbuildPlugin = {
         return null;
       }
 
-      const source = await fs.promises.readFile(args.path, "utf8");
+      let fileHandle;
+      let source;
+      try {
+        fileHandle = await fs.promises.open(args.path, "r");
+        source = await fileHandle.readFile({ encoding: "utf8" });
+      } catch (readError) {
+        return {
+          errors: [
+            {
+              text: readError instanceof Error ? readError.message : String(readError),
+              location: {
+                file: args.path,
+              },
+            },
+          ],
+        };
+      } finally {
+        if (fileHandle) {
+          await fileHandle.close();
+        }
+      }
+
       const isTsx = args.path.endsWith(".tsx");
       const isTs = args.path.endsWith(".ts");
       const isJsx = args.path.endsWith(".jsx");
@@ -149,7 +170,7 @@ async function runTask(name, command) {
       resolve({
         name,
         success: !error,
-        output: (stdout + stderr).trim(),
+        output: `${stdout}${stderr}`.trim(),
       });
     });
   });
@@ -159,27 +180,37 @@ async function runTask(name, command) {
  * Surgically transforms createElement("script") occurrences into createElement("scrip"+"t")
  * in the bundled JavaScript output file.
  *
- * Executing this post-bundling avoids minifier constant folding (which would re-collapse
- * "scrip" + "t" back to "script") and ensures that all dependencies (internal and external)
- * receive the exact transformation idempotently with zero side effects.
+ * Utilizes a direct file descriptor to eliminate Time-of-Check to Time-of-Use (TOCTOU)
+ * race conditions and operates on the file atomically.
  */
 async function sanitizeScriptElements(outputFile = "main.js") {
   const targetPath = path.resolve(process.cwd(), outputFile);
-  if (!fs.existsSync(targetPath)) {
-    return;
-  }
+  let fileHandle;
 
-  const content = await fs.promises.readFile(targetPath, "utf8");
-  const targetRegex = /createElement\s*\(\s*(['"`])script\1/g;
+  try {
+    fileHandle = await fs.promises.open(targetPath, "r+");
+    const content = await fileHandle.readFile({ encoding: "utf8" });
+    const targetRegex = /createElement\s*\(\s*(['"`])script\1/g;
 
-  const sanitized = content.replace(
-    targetRegex,
-    'createElement("scrip"+"t"'
-  );
+    const sanitized = content.replace(
+      targetRegex,
+      'createElement("scrip"+"t"'
+    );
 
-  if (sanitized !== content) {
-    await fs.promises.writeFile(targetPath, sanitized, "utf8");
-    console.log('   💉 [Post-Build] Replaced createElement("script") -> createElement("scrip"+"t")');
+    if (sanitized !== content) {
+      await fileHandle.truncate(0);
+      await fileHandle.write(sanitized, 0, "utf8");
+      console.log('   💉 [Post-Build] Replaced createElement("script") -> createElement("scrip"+"t")');
+    }
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
+      return;
+    }
+    throw error;
+  } finally {
+    if (fileHandle) {
+      await fileHandle.close();
+    }
   }
 }
 
@@ -193,7 +224,7 @@ function printReport({
 }) {
   const duration = ((Date.now() - startTime) / 1000).toFixed(2);
 
-  console.log("\n" + "═".repeat(60));
+  console.log(`\n${"═".repeat(60)}`);
   console.log("                     🏗️  FINAL BUILD REPORT");
   console.log("═".repeat(60));
 
@@ -203,11 +234,11 @@ function printReport({
   } else {
     console.log("   ⚠️  Issues found");
     if (lintResult.output) {
-      console.log("   " + "─".repeat(45));
+      console.log(`   ${"─".repeat(45)}`);
       lintResult.output.split("\n").forEach((line) => {
         console.log(`   ${line}`);
       });
-      console.log("   " + "─".repeat(45));
+      console.log(`   ${"─".repeat(45)}`);
     }
   }
 
@@ -217,11 +248,11 @@ function printReport({
   } else {
     console.log("   ⚠️  Errors detected (non-fatal)");
     if (typeResult.output) {
-      console.log("   " + "─".repeat(45));
+      console.log(`   ${"─".repeat(45)}`);
       typeResult.output.split("\n").forEach((line) => {
         console.log(`   ${line}`);
       });
-      console.log("   " + "─".repeat(45));
+      console.log(`   ${"─".repeat(45)}`);
     }
   }
 
@@ -230,9 +261,9 @@ function printReport({
     console.log("   ✅ All components & hooks optimized successfully");
   } else {
     console.log(
-      `   ⚠️  Optimization bypassed for ${compilerIssues.length} components/hooks`
+      `   ⚠️  Optimization bypassed for ${String(compilerIssues.length)} components/hooks`
     );
-    console.log("   " + "─".repeat(45));
+    console.log(`   ${"─".repeat(45)}`);
     compilerIssues.forEach((issue, idx) => {
       const lineCol = issue.loc
         ? `:${String(issue.loc.start.line)}:${String(issue.loc.start.column)}`
@@ -240,7 +271,7 @@ function printReport({
       console.log(`   [${String(idx + 1)}] 📂 ${issue.filename}${lineCol}`);
       console.log(`       ❌ Reason: ${issue.reason}`);
     });
-    console.log("   " + "─".repeat(45));
+    console.log(`   ${"─".repeat(45)}`);
   }
 
   console.log("\n🎯 BUNDLE:");
@@ -248,7 +279,7 @@ function printReport({
     console.log(`   ✅ Success (${duration}s)`);
 
     const outdir = "assets";
-    if (fs.existsSync(outdir)) {
+    try {
       const files = fs.readdirSync(outdir);
       const jsFiles = files.filter((f) => {
         return f.endsWith(".js");
@@ -260,22 +291,30 @@ function printReport({
       if (jsFiles.length > 0 || cssFiles.length > 0) {
         console.log("\n📁 OUTPUT FILES:");
         [...jsFiles, ...cssFiles].forEach((file) => {
-          const stats = fs.statSync(path.join(outdir, file));
-          const sizeKB = (stats.size / 1024).toFixed(2);
-          console.log(`   • ${file} (${sizeKB} KB)`);
+          try {
+            const stats = fs.statSync(path.join(outdir, file));
+            const sizeKB = (stats.size / 1024).toFixed(2);
+            console.log(`   • ${file} (${sizeKB} KB)`);
+          } catch {
+            // File might have been cleaned up concurrently
+          }
         });
+      }
+    } catch (dirError) {
+      if (!dirError || typeof dirError !== "object" || !("code" in dirError) || dirError.code !== "ENOENT") {
+        throw dirError;
       }
     }
   } else {
     console.log("   ❌ Failed");
     if (buildError) {
-      console.log("   " + "─".repeat(45));
+      console.log(`   ${"─".repeat(45)}`);
       console.error(`   ${buildError instanceof Error ? buildError.message : String(buildError)}`);
-      console.log("   " + "─".repeat(45));
+      console.log(`   ${"─".repeat(45)}`);
     }
   }
 
-  console.log("\n" + "═".repeat(60) + "\n");
+  console.log(`\n${"═".repeat(60)}\n`);
 }
 
 async function runBuild() {
@@ -293,9 +332,18 @@ async function runBuild() {
   let buildError = null;
 
   try {
-    const cssEntry = ["src/styles.scss", "src/styles.css"].find((f) => {
-      return fs.existsSync(f);
-    });
+    const candidateCssEntries = ["src/styles.scss", "src/styles.css"];
+    let cssEntry = null;
+
+    for (const entry of candidateCssEntries) {
+      try {
+        fs.accessSync(entry, fs.constants.R_OK);
+        cssEntry = entry;
+        break;
+      } catch {
+        // Continue searching candidates
+      }
+    }
 
     await esbuild.build({
       entryPoints: ["src/main.ts", ...(cssEntry ? [cssEntry] : [])],
