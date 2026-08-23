@@ -1,6 +1,8 @@
+***
+
 [![Security scan](https://github.com/Yuichi-Aragi/Canary-Edge/actions/workflows/codeql.yml/badge.svg)](https://github.com/Yuichi-Aragi/Canary-Edge/actions/workflows/codeql.yml) [![GitHub issues](https://img.shields.io/github/issues/Yuichi-Aragi/Canary-Edge?color=f85149)](https://github.com/Yuichi-Aragi/Canary-Edge/issues) [![GitHub closed issues](https://img.shields.io/github/issues-closed/Yuichi-Aragi/Canary-Edge?color=8250df)](https://github.com/Yuichi-Aragi/Canary-Edge/issues?q=is%3Aissue+is%3Aclosed)
 
-***
+
 
 # Canary Edge
 
