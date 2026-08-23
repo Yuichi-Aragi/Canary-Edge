@@ -15,7 +15,7 @@ Canary Edge (CE) is a modern alternative plugin built in direct response to BRAT
 **Who is this for?**
 *   **Developers, Testers, and Advanced Users:** CE is strictly for those who know what a GitHub Personal Access Token (PAT) is and know their way around browser/app DevTools.
 *   **Power Users Wanting More:** CE is strictly for those who have used BRAT and the official plugin manager and *still* found themselves wanting deeper control, transparency, and configurability.
-*   **Prior Experience Required:** If you have never used BRAT or a third-party plugin manager before, **please avoid Canary Edge**. Without prior experience, CE's density and granular control can be overwhelming.
+*   **Prior Experience Required:** If you have never used BRAT or a third-party developer-focused plugin manager before, **please avoid Canary Edge**. Without prior experience, CE's density and granular control can be overwhelming.
 *   **Keep It Simple if You Don't Need This:** If the official plugin manager and BRAT already satisfy your use case and you don't want any added complexity, please avoid installing CE.
 
 
@@ -47,7 +47,9 @@ Unlike many power-user tools that treat mobile as an afterthought, Canary Edge w
 ### 1. Granular Management & Overrides
 By default, CE delivers a comprehensive **global and per-plugin settings override experience**. Configure default behavior for your entire CE-registered plugin collection, or override specific rules on a plugin-by-plugin basis.
 
-*   **GitHub PAT Control & Real-Time Diagnostics:** Managing API limits shouldn't be a guessing game. By default, CE displays live diagnostic data—including comprehensive rate limit status and granted token permissions—for your global GitHub Personal Access Token (PAT). To handle specialized repositories or isolated accounts, CE allows you to set or override PATs globally as well as on a **per-plugin basis**.
+*   **GitHub PAT Control & Real-Time Diagnostics:** 
+    *   **Recommendation:** **Always configure your personal GitHub PAT.** Canary Edge consumes significantly more GitHub API requests than BRAT as a direct architectural side effect of keeping you thoroughly informed through inline changelogs, tag version histories, pre-flight compatibility checks, and README documentation parsing. 
+    *   Managing API limits shouldn't be a guessing game. CE displays live diagnostic data—including real-time rate limit status and active token permissions—for your global GitHub PAT. To handle specialized repositories or isolated accounts, CE allows you to set or override PATs globally as well as on a **per-plugin basis**.
 *   **Deep Version Selection:** BRAT arbitrarily limits tag history during release selection. CE breaks past this ceiling, allowing you to load more historical versions directly inside the version picker so you can pinpoint, inspect, or downgrade to any historic release effortlessly.
 *   **Release Prioritization:** Choose to prioritize **Beta** or **Stable** releases on a per-plugin basis.
 *   **Dual Incompatibility Overrides:** BRAT lumps compatibility bypasses together. CE splits them into two distinct, independent settings:
@@ -89,7 +91,7 @@ Want to check compatibility when adjusting versions of already tracked plugins?
 ### 3. Search & Pre-Install Auditing
 Unlike BRAT, you do not need to constantly hunt down full repository URLs or guess what you are pulling:
 *   **Pre-Installation Inspection (README & Changelog):** Inspect the target release's documentation and changelog directly within the panel before committing any files.
-*   **Universal GitHub Scrubbing:** For unlisted repositories, paste almost any GitHub link variation. CE's scrubbing engine handles standard URLs, shorthand (`user/repo`), SSH formats, API endpoints, sub-pages, and raw links automatically.
+*   **Universal GitHub URL Scrubbing:** You should never have to manually edit, clean, or prune a repository link just to appease a tool that requires an exact `user/repo` syntax. CE includes an intelligent URL scrubbing engine that automatically parses almost any link format you paste—including full browser URLs, deep sub-links (e.g., `/tree/main`, `/releases/tag/v1.0.0`, `/blob/...`), shorthand (`user/repo`), SSH cloning strings (`git@github.com:...`), raw endpoints, or GitHub API links. It extracts the clean repository target automatically without requiring any manual text editing.
 
 
 
@@ -111,10 +113,14 @@ If you already have untracked plugins installed in your vault (whether enabled o
 From here, you can register any installed plugin into CE's tracking engine in a single click.
 
 
-## Engineering Standards & Security
+## Engineering Standards, Security & Network Scope
 
 Canary Edge is built to the highest standards of modern plugin development. We prioritize security and code health to ensure your vault remains a fortress.
-.
+
+*   **Strict Network Scope:** Canary Edge strictly limits its network communication to two official, trusted endpoints:
+    1.  **GitHub (`https://github.com`)**: Communicated with exclusively through the official GitHub **Octokit** SDK to fetch repository metadata, manifests, releases, assets, changelogs, and READMEs.
+    2.  **Obsidian Community Directory (`https://community.obsidian.md`)**: Used solely to cross-reference and verify official community plugin registry data.
+    *   *There are zero third-party telemetry endpoints, external tracking servers, or unverified remote calls.* You can verify this yourself by checking the repo.
 *   **CodeQL Analysis:** Our codebase is continuously scanned using GitHub’s **CodeQL** to identify vulnerabilities and maintain professional-grade code integrity.
 *   **Obsidian ESLint Compliant:** Canary Edge is fully compliant with official Obsidian ESLint plugin rules, ensuring optimal performance and seamless integration with the host environment.
 
